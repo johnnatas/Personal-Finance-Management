@@ -47,7 +47,10 @@ export default function SignUpPage() {
     const { error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
-      options: { data: { name: data.name } },
+      options: {
+        data: { name: data.name },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
     if (authError) {
       setError(authError.message === 'User already registered' ? 'Este email já está cadastrado.' : authError.message)
