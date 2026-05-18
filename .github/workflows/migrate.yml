@@ -1,0 +1,42 @@
+name: Run Supabase Migrations
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run migrations via Supabase Management API
+        env:
+          SUPABASE_PROJECT_REF: qxxavsgwprcepdhckgsj
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          run_sql() {
+            local sql="$1"
+            local response
+            response=$(curl -s -w "\n%{http_code}" \
+              -X POST \
+              "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(echo "$sql" | jq -Rs .)}")
+            local body http_code
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n -1)
+            echo "HTTP $http_code: $body"
+            if [ "$http_code" != "200" ]; then
+              echo "Migration failed!"
+              exit 1
+            fi
+          }
+
+          echo "=== Running 001_initial_schema.sql ==="
+          run_sql "$(cat supabase/migrations/001_initial_schema.sql)"
+
+          echo "=== Running 002_rls_policies.sql ==="
+          run_sql "$(cat supabase/migrations/002_rls_policies.sql)"
+
+          echo "=== Migrations complete ==="
