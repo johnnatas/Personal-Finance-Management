@@ -8,7 +8,7 @@ import { TransactionType, TransactionStatus, PaymentMethod } from '@/domain/enti
 
 const schema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
-  amount: z.coerce.number({ required_error: 'Valor é obrigatório' }).positive('Valor deve ser maior que zero'),
+  amount: z.coerce.number().positive('Valor deve ser maior que zero'),
   description: z.string().min(1, 'Descrição é obrigatória').max(255, 'Descrição muito longa'),
   date: z.string().min(1, 'Data é obrigatória'),
   accountId: z.string().min(1, 'Conta é obrigatória'),
@@ -53,7 +53,8 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
   const today = new Date().toISOString().split('T')[0]
 
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       type: 'expense',
       date: today,

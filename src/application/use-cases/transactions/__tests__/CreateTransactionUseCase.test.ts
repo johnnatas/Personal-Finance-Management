@@ -61,7 +61,7 @@ describe('CreateTransactionUseCase', () => {
     accountRepo = makeAccountRepo()
     useCase = new CreateTransactionUseCase(transactionRepo, accountRepo)
 
-    vi.mocked(transactionRepo.create).mockImplementation(async (t) => t)
+    vi.mocked(transactionRepo.create).mockImplementation(async (t) => t as Awaited<ReturnType<ITransactionRepository['create']>>)
   })
 
   it('should create an expense transaction and debit the account', async () => {

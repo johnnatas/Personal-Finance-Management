@@ -65,7 +65,11 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
     refetch()
   }
 
-  const accounts = initialAccounts.map(a => ({ ...a, isActive: a.isActive ?? true }))
+  const accounts = initialAccounts.map(a => ({
+    ...a,
+    currentBalance: a.current_balance,
+    isActive: a.isActive ?? true,
+  }))
 
   return (
     <div className="space-y-6">
