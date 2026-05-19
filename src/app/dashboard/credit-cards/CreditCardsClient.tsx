@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Plus, CreditCard, Trash2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
+import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
+import { useToast } from '@/presentation/components/ui/Toast'
 
 const FLAGS = [
   { value: 'visa', label: 'Visa', color: '#1A1F71' },
@@ -49,10 +52,12 @@ function UsageBar({ current, limit }: { current: number; limit: number }) {
 
 export function CreditCardsClient({ initialCards, accounts }: Props) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [cards, setCards] = useState(initialCards)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', flag: 'visa', last_four: '', credit_limit: '',
     closing_day: '10', due_day: '17', color: '#8B5CF6',
@@ -100,13 +105,20 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
     setShowForm(false)
     setErrors({})
     setForm({ name: '', flag: 'visa', last_four: '', credit_limit: '', closing_day: '10', due_day: '17', color: '#8B5CF6', institution: '', linked_account_id: '' })
+    showToast('Cartão adicionado com sucesso!')
     router.refresh()
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Excluir este cartão?')) return
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     const supabase = createClient()
-    await supabase.from('credit_cards').update({ is_active: false }).eq('id', id)
+    await supabase.from('credit_cards').update({ is_active: false }).eq('id', deleteTarget)
+    setDeleteTarget(null)
+    showToast('Cartão excluído', 'info')
     router.refresh()
   }
 
@@ -140,8 +152,8 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5 col-span-2 sm:col-span-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-1">
                 <label className="text-sm font-medium text-gray-700">Nome do cartão *</label>
                 <input {...field('name')} placeholder="Ex: Nubank Roxinho"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
@@ -162,8 +174,15 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Limite de crédito *</label>
-                <input type="number" step="0.01" min="0.01" {...field('credit_limit')} placeholder="0,00"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
+                <CurrencyInput
+                  value={form.credit_limit}
+                  onChange={(numericValue) => {
+                    setForm(f => ({ ...f, credit_limit: numericValue }))
+                    setErrors(ev => { const n = { ...ev }; delete n.credit_limit; return n })
+                  }}
+                  placeholder="0,00"
+                  className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
                 {errors.credit_limit && <p className="text-xs text-red-600">{errors.credit_limit}</p>}
               </div>
               <div className="space-y-1.5">
@@ -202,7 +221,7 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
                 ))}
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
               <button type="button" onClick={() => { setShowForm(false); setErrors({}) }}
                 className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Cancelar
@@ -292,6 +311,14 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Excluir cartão"
+        message="Tem certeza que deseja excluir este cartão?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

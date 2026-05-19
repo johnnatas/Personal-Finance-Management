@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Wallet, Building2, CreditCard, TrendingUp, Banknote, MoreHorizontal, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
+import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
+import { useToast } from '@/presentation/components/ui/Toast'
 
 const ACCOUNT_TYPES = [
   { value: 'checking_account', label: 'Conta Corrente', icon: Building2 },
@@ -42,10 +45,12 @@ function AccountTypeLabel({ type }: { type: string }) {
 function AccountsInner({ initialAccounts }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { showToast } = useToast()
   const isOnboarding = searchParams.get('onboarding') === 'true'
   const [accounts, setAccounts] = useState(initialAccounts)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', type: 'checking_account', initial_balance: '',
     currency: 'BRL', color: '#3B82F6', institution: '',
@@ -72,13 +77,20 @@ function AccountsInner({ initialAccounts }: Props) {
     setShowForm(false)
     setForm({ name: '', type: 'checking_account', initial_balance: '', currency: 'BRL', color: '#3B82F6', institution: '' })
     setSaving(false)
+    showToast('Conta criada com sucesso!')
     router.refresh()
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Desativar esta conta?')) return
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     const supabase = createClient()
-    await supabase.from('accounts').update({ is_active: false }).eq('id', id)
+    await supabase.from('accounts').update({ is_active: false }).eq('id', deleteTarget)
+    setDeleteTarget(null)
+    showToast('Conta desativada', 'info')
     router.refresh()
   }
 
@@ -114,7 +126,7 @@ function AccountsInner({ initialAccounts }: Props) {
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-5 text-lg font-semibold text-gray-900">Nova Conta</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Nome da conta *</label>
                 <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -129,8 +141,12 @@ function AccountsInner({ initialAccounts }: Props) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Saldo inicial</label>
-                <input type="number" step="0.01" min="0" value={form.initial_balance} onChange={e => setForm(f => ({ ...f, initial_balance: e.target.value }))}
-                  placeholder="0,00" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
+                <CurrencyInput
+                  value={form.initial_balance}
+                  onChange={(numericValue) => setForm(f => ({ ...f, initial_balance: numericValue }))}
+                  placeholder="0,00"
+                  className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Instituição</label>
@@ -148,7 +164,7 @@ function AccountsInner({ initialAccounts }: Props) {
                 ))}
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
               <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {saving ? 'Salvando...' : 'Salvar Conta'}
@@ -198,6 +214,14 @@ function AccountsInner({ initialAccounts }: Props) {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Desativar conta"
+        message="Tem certeza que deseja desativar esta conta?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
