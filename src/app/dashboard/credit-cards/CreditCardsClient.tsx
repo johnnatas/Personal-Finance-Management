@@ -6,6 +6,7 @@ import { Plus, CreditCard, Trash2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { Modal } from '@/presentation/components/ui/Modal'
 import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
 import { useToast } from '@/presentation/components/ui/Toast'
 
@@ -141,9 +142,7 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
         </button>
       </div>
 
-      {showForm && (
-        <div className="card">
-          <h2 className="mb-5 text-[15px] font-semibold text-[var(--color-fg)]">Novo Cartão de Crédito</h2>
+      <Modal open={showForm} onClose={() => { setShowForm(false); setErrors({}) }} title="Novo Cartão de Crédito">
           {errors.submit && (
             <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0" /> {errors.submit}
@@ -213,7 +212,7 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
               </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-              <button type="button" onClick={() => { setShowForm(false); setErrors({}) }} className="btn btn-outline">
+              <button type="button" onClick={() => { setShowForm(false); setErrors({}) }} className="btn btn-ghost">
                 Cancelar
               </button>
               <button type="submit" disabled={saving} className="btn btn-primary">
@@ -221,8 +220,7 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </Modal>
 
       {cards.length === 0 && !showForm && (
         <div className="card flex flex-col items-center justify-center border-dashed border-2 py-16">

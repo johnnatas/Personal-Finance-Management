@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, ArrowUpRight, ArrowDownRight, ArrowLeftRight, Trash2 } from 'lucide-react'
 import { TransactionForm } from '@/presentation/components/transactions/TransactionForm'
@@ -8,6 +8,8 @@ import { useTransactions } from '@/presentation/hooks/useTransactions'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
 import { createClient } from '@/infrastructure/supabase/client'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { Modal } from '@/presentation/components/ui/Modal'
+import { CategoryIcon } from '@/presentation/components/ui/CategoryIcon'
 import { useToast } from '@/presentation/components/ui/Toast'
 
 interface Account { id: string; name: string; type: string; current_balance: number; currency: string; color: string; isActive: boolean; currentBalance: number }
@@ -21,10 +23,18 @@ const TIPO_OPTIONS = [
   { value: 'transfer', label: 'Transferências' },
 ]
 
-export function TransactionsClient({ initialAccounts, initialCategories }: Props) {
+function TransactionsInner({ initialAccounts, initialCategories }: Props) {
   const router = useRouter()
   const { showToast } = useToast()
   const [showForm, setShowForm] = useState(false)
+
+  // Open the modal automatically when URL has ?new=1 (from mobile FAB).
+  // Read window.location to avoid useSearchParams in test mocks.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const sp = new URLSearchParams(window.location.search)
+    if (sp.get('new') === '1') setShowForm(true)
+  }, [])
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -143,17 +153,14 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
         </div>
       </div>
 
-      {showForm && (
-        <div className="card">
-          <h2 className="mb-4 text-[15px] font-semibold text-[var(--color-fg)]">Nova Transação</h2>
-          <TransactionForm
-            accounts={initialAccounts}
-            categories={initialCategories}
-            onSubmit={handleSubmit as Parameters<typeof TransactionForm>[0]['onSubmit']}
-            onCancel={() => setShowForm(false)}
-          />
-        </div>
-      )}
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nova Transação">
+        <TransactionForm
+          accounts={initialAccounts}
+          categories={initialCategories}
+          onSubmit={handleSubmit as Parameters<typeof TransactionForm>[0]['onSubmit']}
+          onCancel={() => setShowForm(false)}
+        />
+      </Modal>
 
       {/* Filters card */}
       <div className="card">
@@ -229,12 +236,12 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
                 </div>
                 {groups[date].map(t => (
                   <div key={t.id} className="tx-row">
-                    <div
-                      className="tx-icon"
-                      style={{ backgroundColor: t.category_color || 'var(--color-fg-faint)' }}
-                    >
-                      <span className="text-xs font-bold">{t.category_name?.[0] ?? '?'}</span>
-                    </div>
+                    <CategoryIcon
+                      name={t.category_name}
+                      color={t.category_color || 'var(--color-fg-faint)'}
+                      size={40}
+                      radius={12}
+                    />
                     <div className="tx-meta">
                       <p className="title">{t.description}</p>
                       <p className="sub">{t.category_name ?? 'Sem categoria'} · {t.account_name}</p>
@@ -274,5 +281,13 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+  )
+}
+
+export function TransactionsClient(props: Props) {
+  return (
+    <Suspense fallback={null}>
+      <TransactionsInner {...props} />
+    </Suspense>
   )
 }

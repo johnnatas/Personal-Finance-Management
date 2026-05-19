@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Check } from 'lucide-react'
 import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
 
 const schema = z.object({
@@ -46,9 +47,6 @@ interface TransactionFormProps {
   loading?: boolean
 }
 
-const inputClass = 'input'
-const labelClass = 'label'
-
 export function TransactionForm({ accounts, categories, onSubmit, onCancel, defaultValues, loading }: TransactionFormProps) {
   const today = new Date().toISOString().split('T')[0]
 
@@ -66,82 +64,107 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
 
   const type = watch('type')
   const amount = watch('amount')
+  const categoryId = watch('categoryId')
 
   const filteredCategories = categories.filter(
     c => c.type === type || c.type === 'both'
   )
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label htmlFor="type" className={labelClass}>Tipo</label>
-          <select
-            id="type"
-            {...register('type')}
-            className={inputClass}
-          >
-            <option value="expense">Despesa</option>
-            <option value="income">Receita</option>
-            <option value="transfer">Transferência</option>
-          </select>
-        </div>
+  const setType = (next: 'income' | 'expense' | 'transfer') => {
+    setValue('type', next, { shouldValidate: true })
+    // clear category if it no longer fits the new type
+    const stillValid = categories.find(c => c.id === categoryId && (c.type === next || c.type === 'both'))
+    if (!stillValid) setValue('categoryId', '', { shouldValidate: false })
+  }
 
-        <div className="space-y-1">
-          <label htmlFor="status" className={labelClass}>Status</label>
-          <select
-            id="status"
-            {...register('status')}
-            className={inputClass}
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      {/* Tipo */}
+      <div className="field">
+        <label htmlFor="type" className="label">Tipo</label>
+        <div className="segments" role="group">
+          <button
+            type="button"
+            onClick={() => setType('expense')}
+            className={type === 'expense' ? 'active' : ''}
+            style={{ color: type === 'expense' ? 'var(--color-danger)' : undefined }}
           >
-            <option value="completed">Efetivada</option>
-            <option value="pending">Pendente</option>
-          </select>
+            Despesa
+          </button>
+          <button
+            type="button"
+            onClick={() => setType('income')}
+            className={type === 'income' ? 'active' : ''}
+            style={{ color: type === 'income' ? 'var(--color-success)' : undefined }}
+          >
+            Receita
+          </button>
+          <button
+            type="button"
+            onClick={() => setType('transfer')}
+            className={type === 'transfer' ? 'active' : ''}
+          >
+            Transferência
+          </button>
         </div>
+        {/* Hidden select kept for accessibility (label association + tests) */}
+        <select id="type" {...register('type')} className="sr-only" aria-hidden="true" tabIndex={-1}>
+          <option value="expense">Despesa</option>
+          <option value="income">Receita</option>
+          <option value="transfer">Transferência</option>
+        </select>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="amount" className={labelClass}>Valor</label>
+      {/* Valor — big input */}
+      <div className="field">
+        <label htmlFor="amount" className="label">Valor</label>
         <CurrencyInput
           id="amount"
+          aria-label="Valor"
           value={amount ? String(amount) : ''}
           onChange={(numericValue) => setValue('amount', numericValue ? parseFloat(numericValue) : 0, { shouldValidate: true })}
-          className="input"
+          className="input !h-16 !pl-10 !text-2xl !font-semibold"
         />
-        {errors.amount && <p className="text-xs text-red-600">{errors.amount.message}</p>}
+        {errors.amount && <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>}
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="description" className={labelClass}>Descrição</label>
+      {/* Descrição */}
+      <div className="field">
+        <label htmlFor="description" className="label">Descrição</label>
         <input
           id="description"
           type="text"
           placeholder="Ex: Supermercado Extra"
           {...register('description')}
-          className={inputClass}
+          className="input"
         />
-        {errors.description && <p className="text-xs text-red-600">{errors.description.message}</p>}
+        {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
       </div>
 
+      {/* Data + Conta */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label htmlFor="date" className={labelClass}>Data</label>
-          <input
-            id="date"
-            type="date"
-            {...register('date')}
-            className={inputClass}
-          />
-          {errors.date && <p className="text-xs text-red-600">{errors.date.message}</p>}
+        <div className="field">
+          <label htmlFor="date" className="label">Data</label>
+          <input id="date" type="date" {...register('date')} className="input" />
+          {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
         </div>
+        <div className="field">
+          <label htmlFor="accountId" className="label">Conta</label>
+          <select id="accountId" {...register('accountId')} className="select">
+            <option value="">Selecione uma conta</option>
+            {accounts.filter(a => a.isActive).map(account => (
+              <option key={account.id} value={account.id}>{account.name}</option>
+            ))}
+          </select>
+          {errors.accountId && <p className="mt-1 text-xs text-red-600">{errors.accountId.message}</p>}
+        </div>
+      </div>
 
-        <div className="space-y-1">
-          <label htmlFor="paymentMethod" className={labelClass}>Forma de Pagamento</label>
-          <select
-            id="paymentMethod"
-            {...register('paymentMethod')}
-            className={inputClass}
-          >
+      {/* Forma de pagamento + Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="field">
+          <label htmlFor="paymentMethod" className="label">Forma de Pagamento</label>
+          <select id="paymentMethod" {...register('paymentMethod')} className="select">
             <option value="">Selecione</option>
             <option value="pix">PIX</option>
             <option value="credit_card">Cartão de Crédito</option>
@@ -151,31 +174,20 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
             <option value="boleto">Boleto</option>
           </select>
         </div>
+        <div className="field">
+          <label htmlFor="status" className="label">Status</label>
+          <select id="status" {...register('status')} className="select">
+            <option value="completed">Efetivada</option>
+            <option value="pending">Pendente</option>
+          </select>
+        </div>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="accountId" className={labelClass}>Conta</label>
-        <select
-          id="accountId"
-          {...register('accountId')}
-          className={inputClass}
-        >
-          <option value="">Selecione uma conta</option>
-          {accounts.filter(a => a.isActive).map(account => (
-            <option key={account.id} value={account.id}>{account.name}</option>
-          ))}
-        </select>
-        {errors.accountId && <p className="text-xs text-red-600">{errors.accountId.message}</p>}
-      </div>
-
+      {/* Conta destino (transfer) */}
       {type === 'transfer' && (
-        <div className="space-y-1">
-          <label htmlFor="destinationAccountId" className={labelClass}>Conta Destino</label>
-          <select
-            id="destinationAccountId"
-            {...register('destinationAccountId')}
-            className={inputClass}
-          >
+        <div className="field">
+          <label htmlFor="destinationAccountId" className="label">Conta Destino</label>
+          <select id="destinationAccountId" {...register('destinationAccountId')} className="select">
             <option value="">Selecione a conta destino</option>
             {accounts.filter(a => a.isActive).map(account => (
               <option key={account.id} value={account.id}>{account.name}</option>
@@ -184,14 +196,36 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
         </div>
       )}
 
+      {/* Categoria — chip cloud */}
       {type !== 'transfer' && (
-        <div className="space-y-1">
-          <label htmlFor="categoryId" className={labelClass}>Categoria</label>
-          <select
-            id="categoryId"
-            {...register('categoryId')}
-            className={inputClass}
-          >
+        <div className="field">
+          <label htmlFor="categoryId" className="label">Categoria</label>
+          <div className="flex flex-wrap gap-2">
+            {filteredCategories.map(cat => {
+              const isSelected = categoryId === cat.id
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setValue('categoryId', cat.id, { shouldValidate: false })}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border"
+                  style={{
+                    background: isSelected ? cat.color : 'var(--color-surface-muted)',
+                    color: isSelected ? '#fff' : 'var(--color-fg)',
+                    borderColor: isSelected ? cat.color : 'transparent',
+                  }}
+                >
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ background: isSelected ? '#fff' : cat.color }}
+                  />
+                  {cat.name}
+                </button>
+              )
+            })}
+          </div>
+          {/* Hidden select for accessibility/tests */}
+          <select id="categoryId" {...register('categoryId')} className="sr-only" aria-hidden="true" tabIndex={-1}>
             <option value="">Sem categoria</option>
             {filteredCategories.map(cat => (
               <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -201,19 +235,11 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
       )}
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn btn-outline"
-        >
+        <button type="button" onClick={onCancel} className="btn btn-ghost">
           Cancelar
         </button>
-        <button
-          type="submit"
-          disabled={isSubmitting || loading}
-          className="btn btn-primary"
-        >
-          Salvar
+        <button type="submit" disabled={isSubmitting || loading} className="btn btn-primary">
+          <Check className="h-4 w-4" /> Salvar
         </button>
       </div>
     </form>

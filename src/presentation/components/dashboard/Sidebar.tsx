@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -32,9 +33,11 @@ interface SidebarProps {
   onClose?: () => void
   userName?: string
   userEmail?: string
+  transactionsBadge?: number
+  cardsBadge?: number
 }
 
-function NavLink({ item, pathname, onClose }: { item: NavItem; pathname: string; onClose?: () => void }) {
+function NavLink({ item, pathname, onClose, badge }: { item: NavItem; pathname: string; onClose?: () => void; badge?: number }) {
   const isActive = item.href === '/dashboard'
     ? pathname === '/dashboard'
     : pathname.startsWith(item.href)
@@ -43,19 +46,28 @@ function NavLink({ item, pathname, onClose }: { item: NavItem; pathname: string;
     <Link
       href={item.href}
       onClick={onClose}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+      className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
         isActive
           ? 'bg-[var(--color-brand-300)] text-[var(--color-brand-900)]'
           : 'text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-fg)]'
       }`}
     >
       <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
-      <span>{item.label}</span>
+      <span className="flex-1">{item.label}</span>
+      {badge != null && badge > 0 && (
+        <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+          isActive
+            ? 'bg-[var(--color-brand-900)]/15 text-[var(--color-brand-900)]'
+            : 'bg-[var(--color-surface-muted)] text-[var(--color-fg-muted)]'
+        }`}>
+          {badge}
+        </span>
+      )}
     </Link>
   )
 }
 
-export function Sidebar({ isOpen = true, onClose, userName, userEmail }: SidebarProps) {
+export function Sidebar({ isOpen = true, onClose, userName, userEmail, transactionsBadge, cardsBadge }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -78,9 +90,7 @@ export function Sidebar({ isOpen = true, onClose, userName, userEmail }: Sidebar
       {/* Logo */}
       <div className="flex items-center justify-between px-2 pb-5">
         <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
-          <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--color-brand-500)]">
-            <TrendingUp className="h-4 w-4 text-[var(--color-brand-900)]" strokeWidth={2.4} />
-          </div>
+          <Image src="/dindin-mark.png" alt="Dindin" width={32} height={32} priority className="h-8 w-8 rounded-[10px] object-contain" />
           <span className="text-[17px] font-bold tracking-tight text-[var(--color-fg)]">Dindin</span>
         </Link>
         {onClose && (
@@ -95,7 +105,12 @@ export function Sidebar({ isOpen = true, onClose, userName, userEmail }: Sidebar
         Menu Principal
       </div>
       <nav className="flex flex-col gap-0.5">
-        {mainNav.map(item => <NavLink key={item.href} item={item} pathname={pathname} onClose={onClose} />)}
+        {mainNav.map(item => {
+          let badge: number | undefined
+          if (item.href === '/dashboard/transactions') badge = transactionsBadge
+          if (item.href === '/dashboard/credit-cards') badge = cardsBadge
+          return <NavLink key={item.href} item={item} pathname={pathname} onClose={onClose} badge={badge} />
+        })}
       </nav>
 
       {/* Planejamento */}

@@ -19,6 +19,11 @@ export default async function DashboardPage() {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
   const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0]
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const userName = (user?.user_metadata?.full_name as string | undefined)
+    ?? (user?.user_metadata?.name as string | undefined)
+    ?? (user?.email ? String(user.email).split('@')[0] : 'Você')
+
   const [
     { data: accounts },
     { data: creditCards },
@@ -52,6 +57,7 @@ export default async function DashboardPage() {
       upcomingExpenses={upcomingExpenses ?? []}
       recentTransactions={recentTransactions ?? []}
       currentMonth={now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+      userName={userName}
     />
   )
 }

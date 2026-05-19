@@ -6,6 +6,7 @@ import { Plus, TrendingUp, TrendingDown, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { Modal } from '@/presentation/components/ui/Modal'
 import { useToast } from '@/presentation/components/ui/Toast'
 
 const INVESTMENT_TYPES = [
@@ -122,9 +123,7 @@ export function InvestmentsClient({ initialInvestments }: Props) {
         </div>
       </div>
 
-      {showForm && (
-        <div className="card">
-          <h2 className="mb-5 text-[15px] font-semibold text-[var(--color-fg)]">Novo Investimento</h2>
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Novo Investimento">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="field col-span-1 sm:col-span-2">
@@ -167,14 +166,13 @@ export function InvestmentsClient({ initialInvestments }: Props) {
               </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="btn btn-outline">Cancelar</button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost">Cancelar</button>
               <button type="submit" disabled={saving} className="btn btn-primary">
                 {saving ? 'Salvando...' : 'Salvar Investimento'}
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </Modal>
 
       {investments.length === 0 && !showForm && (
         <div className="card flex flex-col items-center justify-center border-dashed border-2 py-16">

@@ -1,17 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { Menu, TrendingUp } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Menu, Bell } from 'lucide-react'
 import { Sidebar } from './Sidebar'
+import { MobileTabBar } from './MobileTabBar'
 import { ToastProvider } from '@/presentation/components/ui/Toast'
 
 interface DashboardShellProps {
   children: React.ReactNode
   userName?: string
   userEmail?: string
+  transactionsBadge?: number
+  cardsBadge?: number
 }
 
-export function DashboardShell({ children, userName, userEmail }: DashboardShellProps) {
+export function DashboardShell({
+  children,
+  userName,
+  userEmail,
+  transactionsBadge,
+  cardsBadge,
+}: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -22,6 +33,8 @@ export function DashboardShell({ children, userName, userEmail }: DashboardShell
           onClose={() => setSidebarOpen(false)}
           userName={userName}
           userEmail={userEmail}
+          transactionsBadge={transactionsBadge}
+          cardsBadge={cardsBadge}
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -34,21 +47,24 @@ export function DashboardShell({ children, userName, userEmail }: DashboardShell
             >
               <Menu className="h-4 w-4" />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="grid h-7 w-7 place-items-center rounded-[10px] bg-[var(--color-brand-500)]">
-                <TrendingUp className="h-3.5 w-3.5 text-[var(--color-brand-900)]" strokeWidth={2.4} />
-              </div>
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <Image src="/dindin-mark.png" alt="Dindin" width={28} height={28} priority className="h-7 w-7 object-contain" />
               <span className="text-[15px] font-bold text-[var(--color-fg)]">Dindin</span>
-            </div>
-            <div className="w-9" />
+            </Link>
+            <button className="icon-btn relative" aria-label="Notificações">
+              <Bell className="h-4 w-4" />
+              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--color-brand-500)]" />
+            </button>
           </header>
 
           {/* Page content */}
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 pb-24 lg:p-7 lg:pb-14">{children}</div>
+            <div className="p-4 pb-28 lg:p-7 lg:pb-14">{children}</div>
           </main>
         </div>
       </div>
+
+      <MobileTabBar />
     </ToastProvider>
   )
 }

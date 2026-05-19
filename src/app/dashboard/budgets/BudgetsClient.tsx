@@ -6,6 +6,7 @@ import { Plus, PieChart, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-reac
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { Modal } from '@/presentation/components/ui/Modal'
 import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
 import { useToast } from '@/presentation/components/ui/Toast'
 
@@ -109,9 +110,7 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
         </div>
       )}
 
-      {showForm && (
-        <div className="card">
-          <h2 className="mb-5 text-[15px] font-semibold text-[var(--color-fg)]">Novo Orçamento</h2>
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Novo Orçamento">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="field">
@@ -152,14 +151,13 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
               </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="btn btn-outline">Cancelar</button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost">Cancelar</button>
               <button type="submit" disabled={saving} className="btn btn-primary">
                 {saving ? 'Salvando...' : 'Salvar Orçamento'}
               </button>
             </div>
           </form>
-        </div>
-      )}
+      </Modal>
 
       {budgets.length === 0 && !showForm && (
         <div className="card flex flex-col items-center justify-center border-dashed border-2 py-16">

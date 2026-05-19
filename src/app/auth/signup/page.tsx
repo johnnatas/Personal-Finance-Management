@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { TrendingUp, Mail, Lock, User, CheckCircle2, AlertCircle } from 'lucide-react'
+import Image from 'next/image'
+import { Mail, Lock, User, CheckCircle2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 
 const schema = z.object({
@@ -84,9 +85,7 @@ export default function SignUpPage() {
     <div className="flex min-h-screen">
       {/* Painel esquerdo — gradiente sage */}
       <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center bg-gradient-to-br from-[var(--color-brand-400)] via-[var(--color-brand-500)] to-[var(--color-brand-700)] p-12">
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[rgba(255,255,255,0.25)] backdrop-blur-sm">
-          <TrendingUp className="h-8 w-8 text-[var(--color-brand-900)]" />
-        </div>
+        <Image src="/dindin-logo.png" alt="Dindin" width={180} height={180} priority className="mb-2 h-44 w-44 object-contain" />
         <h2 className="mb-3 text-3xl font-bold text-[var(--color-brand-900)]">Dindin</h2>
         <p className="mb-8 max-w-xs text-center text-[var(--color-brand-900)]/80 text-sm leading-relaxed">
           Crie sua conta gratuita e comece a tomar o controle das suas finanças agora mesmo.
@@ -112,9 +111,7 @@ export default function SignUpPage() {
         <div className="w-full max-w-md">
           {/* Logo mobile */}
           <div className="mb-8 flex items-center justify-center gap-2 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500">
-              <TrendingUp className="h-5 w-5 text-brand-900" />
-            </div>
+            <Image src="/dindin-mark.png" alt="Dindin" width={40} height={40} priority className="h-10 w-10 object-contain" />
             <span className="text-xl font-bold text-[var(--color-fg)]">Dindin</span>
           </div>
 
