@@ -46,7 +46,7 @@ export function CurrencyInput({ value, onChange, placeholder = '0,00', className
 
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 select-none">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-fg-faint)] select-none">
         R$
       </span>
       <input
@@ -58,7 +58,7 @@ export function CurrencyInput({ value, onChange, placeholder = '0,00', className
         onFocus={handleFocus}
         placeholder={placeholder}
         required={required}
-        className={`pl-9 ${className}`}
+        className={`pl-9 tabular-nums ${className}`}
         aria-label={rest['aria-label']}
       />
     </div>

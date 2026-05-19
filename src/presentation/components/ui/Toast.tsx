@@ -28,15 +28,15 @@ const ICONS = {
 }
 
 const STYLES = {
-  success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+  success: 'bg-brand-300 border-transparent text-brand-900',
   error: 'bg-red-50 border-red-200 text-red-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
+  info: 'bg-[var(--color-surface)] border-[var(--color-border-soft)] text-[var(--color-fg)]',
 }
 
 const ICON_STYLES = {
-  success: 'text-emerald-500',
+  success: 'text-brand-900',
   error: 'text-red-500',
-  info: 'text-blue-500',
+  info: 'text-brand-700',
 }
 
 function ToastItem({ toast, onRemove }: { toast: ToastItem; onRemove: (id: string) => void }) {

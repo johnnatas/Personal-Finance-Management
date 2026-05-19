@@ -75,22 +75,21 @@ export function ProfileClient({ user, profile }: Props) {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Meu Perfil</h1>
-        <p className="text-sm text-gray-500">{user.email}</p>
+        <h1 className="text-[28px] font-bold tracking-tight text-[var(--color-fg)]">Meu Perfil</h1>
+        <p className="text-sm text-[var(--color-fg-muted)]">{user.email}</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+      {/* Tabs (segments) */}
+      <div className="segments w-full">
         {[
           { key: 'profile' as const, label: 'Dados Pessoais', icon: User },
           { key: 'password' as const, label: 'Alterar Senha', icon: Lock },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
+            type="button"
             onClick={() => setActiveTab(key)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors ${
-              activeTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            className={`flex flex-1 items-center justify-center gap-2 ${activeTab === key ? 'active' : ''}`}
           >
             <Icon className="h-4 w-4" />
             {label}
@@ -99,47 +98,47 @@ export function ProfileClient({ user, profile }: Props) {
       </div>
 
       {activeTab === 'profile' && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="card">
           <form onSubmit={handleProfileSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-sm font-medium text-gray-700">Nome completo *</label>
+              <div className="field sm:col-span-2">
+                <label className="label">Nome completo *</label>
                 <input
                   required
                   value={profileForm.name}
                   onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Seu nome"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="input"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Telefone</label>
+              <div className="field">
+                <label className="label">Telefone</label>
                 <input
                   type="tel"
                   value={profileForm.phone}
                   onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))}
                   placeholder="(00) 00000-0000"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="input"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Moeda padrão</label>
+              <div className="field">
+                <label className="label">Moeda padrão</label>
                 <select
                   value={profileForm.currency}
                   onChange={e => setProfileForm(f => ({ ...f, currency: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  className="select"
                 >
                   <option value="BRL">Real (BRL)</option>
                   <option value="USD">Dólar (USD)</option>
                   <option value="EUR">Euro (EUR)</option>
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Tema</label>
+              <div className="field">
+                <label className="label">Tema</label>
                 <select
                   value={profileForm.theme}
                   onChange={e => setProfileForm(f => ({ ...f, theme: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  className="select"
                 >
                   <option value="auto">Automático</option>
                   <option value="light">Claro</option>
@@ -148,11 +147,7 @@ export function ProfileClient({ user, profile }: Props) {
               </div>
             </div>
             <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
-              >
+              <button type="submit" disabled={savingProfile} className="btn btn-primary">
                 <Save className="h-4 w-4" />
                 {savingProfile ? 'Salvando...' : 'Salvar alterações'}
               </button>
@@ -162,58 +157,54 @@ export function ProfileClient({ user, profile }: Props) {
       )}
 
       {activeTab === 'password' && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="card">
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label htmlFor="current-password" className="text-sm font-medium text-gray-700">Senha atual *</label>
+            <div className="field">
+              <label htmlFor="current-password" className="label">Senha atual *</label>
               <div className="relative">
                 <input
                   id="current-password"
                   type={showCurrentPw ? 'text' : 'password'}
                   value={passwordForm.currentPassword}
                   onChange={e => { setPasswordForm(f => ({ ...f, currentPassword: e.target.value })); setPasswordErrors(ev => { const n = { ...ev }; delete n.currentPassword; return n }) }}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  className="input pr-10"
                 />
-                <button type="button" onClick={() => setShowCurrentPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <button type="button" onClick={() => setShowCurrentPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-fg-faint)]">
                   {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {passwordErrors.currentPassword && <p className="text-xs text-red-600">{passwordErrors.currentPassword}</p>}
+              {passwordErrors.currentPassword && <p className="mt-1 text-xs text-red-600">{passwordErrors.currentPassword}</p>}
             </div>
-            <div className="space-y-1.5">
-              <label htmlFor="new-password" className="text-sm font-medium text-gray-700">Nova senha *</label>
+            <div className="field">
+              <label htmlFor="new-password" className="label">Nova senha *</label>
               <div className="relative">
                 <input
                   id="new-password"
                   type={showNewPw ? 'text' : 'password'}
                   value={passwordForm.newPassword}
                   onChange={e => { setPasswordForm(f => ({ ...f, newPassword: e.target.value })); setPasswordErrors(ev => { const n = { ...ev }; delete n.newPassword; return n }) }}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  className="input pr-10"
                 />
-                <button type="button" onClick={() => setShowNewPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <button type="button" onClick={() => setShowNewPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-fg-faint)]">
                   {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {passwordErrors.newPassword && <p className="text-xs text-red-600">{passwordErrors.newPassword}</p>}
-              <p className="text-xs text-gray-400">Mínimo 8 caracteres, 1 maiúscula e 1 número</p>
+              {passwordErrors.newPassword && <p className="mt-1 text-xs text-red-600">{passwordErrors.newPassword}</p>}
+              <p className="mt-1 text-xs text-[var(--color-fg-faint)]">Mínimo 8 caracteres, 1 maiúscula e 1 número</p>
             </div>
-            <div className="space-y-1.5">
-              <label htmlFor="confirm-password" className="text-sm font-medium text-gray-700">Confirmar senha *</label>
+            <div className="field">
+              <label htmlFor="confirm-password" className="label">Confirmar senha *</label>
               <input
                 id="confirm-password"
                 type="password"
                 value={passwordForm.confirmPassword}
                 onChange={e => { setPasswordForm(f => ({ ...f, confirmPassword: e.target.value })); setPasswordErrors(ev => { const n = { ...ev }; delete n.confirmPassword; return n }) }}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                className="input"
               />
-              {passwordErrors.confirmPassword && <p className="text-xs text-red-600">{passwordErrors.confirmPassword}</p>}
+              {passwordErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{passwordErrors.confirmPassword}</p>}
             </div>
             <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                disabled={savingPassword}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
-              >
+              <button type="submit" disabled={savingPassword} className="btn btn-primary">
                 <Lock className="h-4 w-4" />
                 {savingPassword ? 'Alterando...' : 'Alterar senha'}
               </button>

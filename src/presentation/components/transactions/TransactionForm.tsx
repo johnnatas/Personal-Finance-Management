@@ -46,8 +46,8 @@ interface TransactionFormProps {
   loading?: boolean
 }
 
-const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20'
-const labelClass = 'text-sm font-medium text-gray-700'
+const inputClass = 'input'
+const labelClass = 'label'
 
 export function TransactionForm({ accounts, categories, onSubmit, onCancel, defaultValues, loading }: TransactionFormProps) {
   const today = new Date().toISOString().split('T')[0]
@@ -106,7 +106,7 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
           id="amount"
           value={amount ? String(amount) : ''}
           onChange={(numericValue) => setValue('amount', numericValue ? parseFloat(numericValue) : 0, { shouldValidate: true })}
-          className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="input"
         />
         {errors.amount && <p className="text-xs text-red-600">{errors.amount.message}</p>}
       </div>
@@ -204,14 +204,14 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="btn btn-outline"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isSubmitting || loading}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+          className="btn btn-primary"
         >
           Salvar
         </button>

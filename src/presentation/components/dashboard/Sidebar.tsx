@@ -1,33 +1,61 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, CreditCard,
-  PieChart, Target, TrendingUp, LogOut, ChevronRight,
-  X, User,
+  PieChart, Target, TrendingUp, LogOut, X, User,
 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
-import { useRouter } from 'next/navigation'
-import { cn } from '@/presentation/lib/utils'
 
-const navItems = [
+interface NavItem {
+  href: string
+  label: string
+  icon: typeof LayoutDashboard
+}
+
+const mainNav: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/transactions', label: 'Transações', icon: ArrowLeftRight },
   { href: '/dashboard/accounts', label: 'Contas', icon: Wallet },
   { href: '/dashboard/credit-cards', label: 'Cartões', icon: CreditCard },
+]
+
+const planningNav: NavItem[] = [
   { href: '/dashboard/budgets', label: 'Orçamentos', icon: PieChart },
   { href: '/dashboard/goals', label: 'Metas', icon: Target },
   { href: '/dashboard/investments', label: 'Investimentos', icon: TrendingUp },
-  { href: '/dashboard/profile', label: 'Perfil', icon: User },
 ]
 
 interface SidebarProps {
   isOpen?: boolean
   onClose?: () => void
+  userName?: string
+  userEmail?: string
 }
 
-export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+function NavLink({ item, pathname, onClose }: { item: NavItem; pathname: string; onClose?: () => void }) {
+  const isActive = item.href === '/dashboard'
+    ? pathname === '/dashboard'
+    : pathname.startsWith(item.href)
+  const Icon = item.icon
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+        isActive
+          ? 'bg-[var(--color-brand-300)] text-[var(--color-brand-900)]'
+          : 'text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-fg)]'
+      }`}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+      <span>{item.label}</span>
+    </Link>
+  )
+}
+
+export function Sidebar({ isOpen = true, onClose, userName, userEmail }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -37,71 +65,87 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     router.push('/auth/login')
   }
 
+  const initials = (userName ?? userEmail ?? 'U')
+    .split(' ')
+    .map(s => s[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+
   const navContent = (
-    <>
-      <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-            <TrendingUp className="h-4 w-4 text-white" />
+    <div className="flex h-full flex-col bg-[var(--color-surface)] px-3 py-5">
+      {/* Logo */}
+      <div className="flex items-center justify-between px-2 pb-5">
+        <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
+          <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--color-brand-500)]">
+            <TrendingUp className="h-4 w-4 text-[var(--color-brand-900)]" strokeWidth={2.4} />
           </div>
-          <span className="text-lg font-bold text-gray-900">Dindin</span>
-        </div>
+          <span className="text-[17px] font-bold tracking-tight text-[var(--color-fg)]">Dindin</span>
+        </Link>
         {onClose && (
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 lg:hidden">
-            <X className="h-5 w-5" />
+          <button onClick={onClose} className="icon-btn lg:hidden" aria-label="Fechar menu">
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-4 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={cn(
-                'flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              )}
-            >
-              <span className="flex items-center gap-3">
-                <Icon className="h-4 w-4" />
-                {label}
-              </span>
-              {isActive && <ChevronRight className="h-3 w-3" />}
-            </Link>
-          )
-        })}
+      {/* Menu Principal */}
+      <div className="px-2 pb-1.5 pt-2 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-fg-faint)]">
+        Menu Principal
+      </div>
+      <nav className="flex flex-col gap-0.5">
+        {mainNav.map(item => <NavLink key={item.href} item={item} pathname={pathname} onClose={onClose} />)}
       </nav>
 
-      <div className="border-t border-gray-200 p-4">
-        <button
-          onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          Sair
-        </button>
+      {/* Planejamento */}
+      <div className="px-2 pb-1.5 pt-4 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-fg-faint)]">
+        Planejamento
       </div>
-    </>
+      <nav className="flex flex-col gap-0.5">
+        {planningNav.map(item => <NavLink key={item.href} item={item} pathname={pathname} onClose={onClose} />)}
+      </nav>
+
+      {/* User card + signout */}
+      <div className="mt-auto pt-4">
+        <NavLink
+          item={{ href: '/dashboard/profile', label: 'Perfil', icon: User }}
+          pathname={pathname}
+          onClose={onClose}
+        />
+        <div className="mt-2 flex items-center gap-2.5 rounded-xl bg-[var(--color-surface-muted)] p-2.5">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-brand-300)] text-[13px] font-semibold text-[var(--color-brand-900)]">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-semibold text-[var(--color-fg)]">{userName ?? 'Usuário'}</div>
+            <div className="truncate text-[11px] text-[var(--color-fg-faint)]">{userEmail ?? ''}</div>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-border)] hover:text-[var(--color-danger)]"
+            title="Sair"
+            aria-label="Sair"
+          >
+            <LogOut className="h-4 w-4" strokeWidth={1.8} />
+          </button>
+        </div>
+      </div>
+    </div>
   )
 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white h-screen sticky top-0">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-[var(--color-border-soft)] lg:flex lg:flex-col">
         {navContent}
       </aside>
 
-      {/* Mobile drawer overlay */}
+      {/* Mobile drawer */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-          <aside className="relative flex w-72 flex-col bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+          <aside className="relative flex w-72 flex-col shadow-2xl">
             {navContent}
           </aside>
         </div>

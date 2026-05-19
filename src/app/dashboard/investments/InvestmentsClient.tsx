@@ -84,85 +84,87 @@ export function InvestmentsClient({ initialInvestments }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Investimentos</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-4 text-sm">
-            <span className="text-gray-500">Investido: <span className="font-semibold text-gray-900">{formatCurrency(totalInvested)}</span></span>
-            <span className="text-gray-500">Atual: <span className="font-semibold text-gray-900">{formatCurrency(totalCurrent)}</span></span>
-            {investments.length > 0 && (
-              <span className={`font-semibold ${totalReturn >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {totalReturn >= 0 ? '+' : ''}{formatCurrency(totalReturn)} ({returnPct.toFixed(2)}%)
-              </span>
-            )}
-          </div>
+          <h1 className="text-[28px] font-bold tracking-tight text-[var(--color-fg)]">Investimentos</h1>
+          <p className="text-sm text-[var(--color-fg-muted)]">Carteira e evolução patrimonial</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={() => setShowForm(true)} className="btn btn-primary">
           <Plus className="h-4 w-4" /> Novo Investimento
         </button>
       </div>
 
+      {/* Summary stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="stat-card">
+          <p className="stat-label">Investido</p>
+          <p className="stat-value">{formatCurrency(totalInvested)}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Atual</p>
+          <p className="stat-value">{formatCurrency(totalCurrent)}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-label">Retorno</p>
+          <p className="stat-value" style={{ color: totalReturn >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+            {totalReturn >= 0 ? '+' : ''}{formatCurrency(totalReturn)}
+          </p>
+          {investments.length > 0 && (
+            <span className={`stat-delta ${totalReturn >= 0 ? 'up' : 'down'}`}>
+              {totalReturn >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+              {returnPct.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      </div>
+
       {showForm && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-5 text-lg font-semibold text-gray-900">Novo Investimento</h2>
+        <div className="card">
+          <h2 className="mb-5 text-[15px] font-semibold text-[var(--color-fg)]">Novo Investimento</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                <label className="text-sm font-medium text-gray-700">Nome *</label>
+              <div className="field col-span-1 sm:col-span-2">
+                <label className="label">Nome *</label>
                 <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Tesouro Selic 2029"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                  placeholder="Ex: Tesouro Selic 2029" className="input" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Tipo *</label>
-                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none">
+              <div className="field">
+                <label className="label">Tipo *</label>
+                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="select">
                   {INVESTMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Instituição</label>
+              <div className="field">
+                <label className="label">Instituição</label>
                 <input value={form.institution} onChange={e => setForm(f => ({ ...f, institution: e.target.value }))}
-                  placeholder="Ex: XP Investimentos"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
+                  placeholder="Ex: XP Investimentos" className="input" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Valor de compra (unit.) *</label>
+              <div className="field">
+                <label className="label">Valor de compra (unit.) *</label>
                 <input required type="number" step="0.01" min="0.01" value={form.purchase_value}
                   onChange={e => setForm(f => ({ ...f, purchase_value: e.target.value }))}
-                  placeholder="0,00"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
+                  placeholder="0,00" className="input tabular-nums" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Valor atual (unit.)</label>
+              <div className="field">
+                <label className="label">Valor atual (unit.)</label>
                 <input type="number" step="0.01" min="0" value={form.current_value}
                   onChange={e => setForm(f => ({ ...f, current_value: e.target.value }))}
-                  placeholder="Igual ao de compra"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
+                  placeholder="Igual ao de compra" className="input tabular-nums" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Quantidade *</label>
+              <div className="field">
+                <label className="label">Quantidade *</label>
                 <input required type="number" step="0.0001" min="0.0001" value={form.quantity}
-                  onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none" />
+                  onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="input tabular-nums" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700">Data de compra *</label>
+              <div className="field">
+                <label className="label">Data de compra *</label>
                 <input required type="date" value={form.purchase_date}
-                  onChange={e => setForm(f => ({ ...f, purchase_date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none" />
+                  onChange={e => setForm(f => ({ ...f, purchase_date: e.target.value }))} className="input" />
               </div>
             </div>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowForm(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Cancelar
-              </button>
-              <button type="submit" disabled={saving}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+              <button type="button" onClick={() => setShowForm(false)} className="btn btn-outline">Cancelar</button>
+              <button type="submit" disabled={saving} className="btn btn-primary">
                 {saving ? 'Salvando...' : 'Salvar Investimento'}
               </button>
             </div>
@@ -171,69 +173,70 @@ export function InvestmentsClient({ initialInvestments }: Props) {
       )}
 
       {investments.length === 0 && !showForm && (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white py-16">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
-            <TrendingUp className="h-8 w-8 text-amber-600" />
+        <div className="card flex flex-col items-center justify-center border-dashed border-2 py-16">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100">
+            <TrendingUp className="h-8 w-8 text-brand-700" />
           </div>
-          <h3 className="mb-1 text-base font-semibold text-gray-900">Nenhum investimento registrado</h3>
-          <p className="mb-6 text-sm text-gray-500 text-center max-w-xs">
+          <h3 className="mb-1 text-base font-semibold text-[var(--color-fg)]">Nenhum investimento registrado</h3>
+          <p className="mb-6 text-sm text-[var(--color-fg-muted)] text-center max-w-xs">
             Acompanhe sua carteira de investimentos e veja sua evolução patrimonial.
           </p>
-          <button onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
+          <button onClick={() => setShowForm(true)} className="btn btn-primary">
             <Plus className="h-4 w-4" /> Adicionar Investimento
           </button>
         </div>
       )}
 
       {investments.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Ativo</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Investido</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Atual</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Retorno</th>
-                <th className="px-3 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {investments.map(inv => {
-                const invested = Number(inv.purchase_value) * Number(inv.quantity)
-                const current = Number(inv.current_value) * Number(inv.quantity)
-                const ret = current - invested
-                const retPct = invested > 0 ? (ret / invested) * 100 : 0
-                const isPositive = ret >= 0
-                return (
-                  <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-gray-900">{inv.name}</p>
-                      <p className="text-xs text-gray-400">
-                        {INVESTMENT_TYPES.find(t => t.value === inv.type)?.label}
-                        {inv.institution && ` · ${inv.institution}`}
-                        {` · ${formatDate(inv.purchase_date)}`}
+        <div className="card p-0 overflow-hidden">
+          <div className="flex flex-col">
+            {investments.map(inv => {
+              const invested = Number(inv.purchase_value) * Number(inv.quantity)
+              const current = Number(inv.current_value) * Number(inv.quantity)
+              const ret = current - invested
+              const retPct = invested > 0 ? (ret / invested) * 100 : 0
+              const isPositive = ret >= 0
+              const typeLabel = INVESTMENT_TYPES.find(t => t.value === inv.type)?.label
+              return (
+                <div key={inv.id} className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[var(--color-border-soft)] last:border-b-0 hover:bg-[var(--color-surface-muted)] transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="chip">{typeLabel}</span>
+                    <div className="min-w-0">
+                      <p className="font-medium text-[var(--color-fg)] truncate">{inv.name}</p>
+                      <p className="text-xs text-[var(--color-fg-faint)]">
+                        {inv.institution && `${inv.institution} · `}{formatDate(inv.purchase_date)}
                       </p>
-                    </td>
-                    <td className="px-5 py-4 text-right text-gray-700">{formatCurrency(invested)}</td>
-                    <td className="px-5 py-4 text-right font-medium text-gray-900">{formatCurrency(current)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <div className={`flex items-center justify-end gap-1 font-semibold ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs text-[var(--color-fg-faint)]">Investido</p>
+                      <p className="text-sm font-medium tabular-nums text-[var(--color-fg-muted)]">{formatCurrency(invested)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-[var(--color-fg-faint)]">Atual</p>
+                      <p className="text-sm font-semibold tabular-nums text-[var(--color-fg)]">{formatCurrency(current)}</p>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className="flex items-center justify-end gap-1 text-sm font-semibold tabular-nums"
+                        style={{ color: isPositive ? 'var(--color-success)' : 'var(--color-danger)' }}
+                      >
                         {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                        {isPositive ? '+' : ''}{formatCurrency(ret)} ({retPct.toFixed(2)}%)
+                        {isPositive ? '+' : ''}{retPct.toFixed(2)}%
                       </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      <button onClick={() => handleDelete(inv.id)}
-                        className="text-gray-300 hover:text-red-500 transition-colors">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      <p className="text-xs tabular-nums" style={{ color: isPositive ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                        {isPositive ? '+' : ''}{formatCurrency(ret)}
+                      </p>
+                    </div>
+                    <button onClick={() => handleDelete(inv.id)} className="icon-btn hover:text-red-500" title="Excluir">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

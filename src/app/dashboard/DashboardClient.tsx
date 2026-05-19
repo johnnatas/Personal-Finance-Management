@@ -81,6 +81,15 @@ const PT_MONTHS: Record<number, string> = {
   6: 'Jul', 7: 'Ago', 8: 'Set', 9: 'Out', 10: 'Nov', 11: 'Dez',
 }
 
+const tooltipStyle: React.CSSProperties = {
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-border-soft)',
+  borderRadius: 12,
+  fontSize: 12,
+  color: 'var(--color-fg)',
+  boxShadow: '0 4px 16px rgba(5, 46, 27, 0.06)',
+}
+
 export function DashboardClient({
   totalBalance, income, expense, accounts, creditCards,
   monthTransactions, trendTransactions, upcomingExpenses,
@@ -120,7 +129,7 @@ export function DashboardClient({
   const accountData = accounts.map(a => ({
     name: a.name,
     saldo: Number(a.current_balance),
-    fill: a.color || '#3B82F6',
+    fill: a.color || 'var(--color-brand-500)',
   }))
 
   // Credit card bills
@@ -141,274 +150,247 @@ export function DashboardClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 capitalize">Resumo de {currentMonth}</p>
+          <h1 className="text-[28px] font-bold tracking-tight text-[var(--color-fg)]">Dashboard</h1>
+          <p className="text-sm text-[var(--color-fg-muted)] capitalize">Resumo de {currentMonth}</p>
         </div>
-        <Link
-          href="/dashboard/transactions"
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-        >
+        <Link href="/dashboard/transactions" className="btn btn-primary">
           <Plus className="h-4 w-4" /> Nova Transação
         </Link>
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards: Saldo Total (featured) + Receitas + Despesas + Resultado */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Saldo Total</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{formatCurrency(totalBalance)}</p>
+        <div className="stat-card featured">
+          <p className="stat-label">Saldo Total</p>
+          <p className="stat-value">{formatCurrency(totalBalance)}</p>
         </div>
         <Link
           href="/dashboard/transactions/income"
-          className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md cursor-pointer transition-shadow block"
+          className="stat-card hover:-translate-y-0.5 transition-transform"
         >
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Receitas do Mês</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">{formatCurrency(income)}</p>
+          <p className="stat-label">Receitas do Mês</p>
+          <p className="stat-value" style={{ color: 'var(--color-success)' }}>{formatCurrency(income)}</p>
         </Link>
         <Link
           href="/dashboard/transactions/expenses"
-          className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md cursor-pointer transition-shadow block"
+          className="stat-card hover:-translate-y-0.5 transition-transform"
         >
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Despesas do Mês</p>
-          <p className="mt-1 text-2xl font-bold text-red-600">{formatCurrency(expense)}</p>
+          <p className="stat-label">Despesas do Mês</p>
+          <p className="stat-value" style={{ color: 'var(--color-danger)' }}>{formatCurrency(expense)}</p>
         </Link>
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Resultado do Mês</p>
-          <p className={`mt-1 text-2xl font-bold ${result >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+        <div className="stat-card">
+          <p className="stat-label">Resultado do Mês</p>
+          <p className="stat-value" style={{ color: result >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
             {formatCurrency(result)}
           </p>
         </div>
       </div>
 
-      {/* Charts row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Despesas por Categoria */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h2 className="text-base font-semibold text-gray-900">Despesas por Categoria</h2>
+      {/* Charts row 1: Evolução (1.4) + Despesas por Categoria (1) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="card">
+          <div className="card-hd">
+            <h2 className="card-title">Receitas vs Despesas</h2>
           </div>
-          <div className="p-4">
-            {categoryData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-sm text-gray-400">Sem despesas neste mês</p>
+          {trendData.length === 0 ? (
+            <div className="empty">Sem dados suficientes</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-soft)" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--color-fg-muted)' }} stroke="var(--color-border)" />
+                <YAxis tick={{ fontSize: 12, fill: 'var(--color-fg-muted)' }} stroke="var(--color-border)" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="receitas" fill="var(--color-success)" name="Receitas" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="despesas" fill="var(--color-danger)" name="Despesas" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-hd">
+            <h2 className="card-title">Despesas por Categoria</h2>
+          </div>
+          {categoryData.length === 0 ? (
+            <div className="empty">Sem despesas neste mês</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                    {categoryData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
+                {categoryData.slice(0, 6).map((entry, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                    <span className="text-xs text-[var(--color-fg-muted)]">{entry.name}</span>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={60}
-                      outerRadius={90}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Charts row 2: Saldo por Conta + Faturas de Cartões */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card">
+          <div className="card-hd">
+            <h2 className="card-title">Saldo por Conta</h2>
+          </div>
+          {accountData.length === 0 ? (
+            <div className="empty">Nenhuma conta ativa</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={accountData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-soft)" />
+                <XAxis type="number" tick={{ fontSize: 12, fill: 'var(--color-fg-muted)' }} stroke="var(--color-border)" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: 'var(--color-fg-muted)' }} stroke="var(--color-border)" width={80} />
+                <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={tooltipStyle} />
+                <Bar dataKey="saldo" name="Saldo" radius={[0, 6, 6, 0]}>
+                  {accountData.map((entry, index) => (
+                    <Cell key={index} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-hd">
+            <h2 className="card-title">Faturas de Cartões</h2>
+          </div>
+          {cardData.length === 0 ? (
+            <div className="empty">Nenhum cartão ativo</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={cardData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-soft)" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--color-fg-muted)' }} stroke="var(--color-border)" />
+                <YAxis tick={{ fontSize: 12, fill: 'var(--color-fg-muted)' }} stroke="var(--color-border)" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="fatura" fill="var(--color-brand-500)" name="Fatura" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="limite" fill="var(--color-brand-200)" name="Limite" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom row: Transações Recentes + Despesas a Pagar */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        {/* Transações Recentes */}
+        <div className="card">
+          <div className="card-hd">
+            <h2 className="card-title">Transações Recentes</h2>
+            <Link href="/dashboard/transactions" className="card-action">Ver todas</Link>
+          </div>
+          {recentTransactions.length === 0 ? (
+            <div className="empty">
+              Nenhuma transação recente
+              <div className="mt-3">
+                <Link href="/dashboard/transactions" className="text-xs font-medium text-brand-700 hover:underline">
+                  Adicionar primeira transação
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {recentTransactions.map(t => (
+                <div key={t.id} className="tx-row">
+                  <div
+                    className="tx-icon"
+                    style={{ backgroundColor: t.category_color || 'var(--color-fg-faint)' }}
+                  >
+                    <span className="text-xs font-bold">{t.category_name?.[0] ?? '?'}</span>
+                  </div>
+                  <div className="tx-meta">
+                    <p className="title">{t.description}</p>
+                    <p className="sub">{t.category_name ?? 'Sem categoria'} · {t.account_name} · {formatDate(t.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {t.type === 'income'
+                      ? <ArrowUpRight className="h-4 w-4" style={{ color: 'var(--color-success)' }} />
+                      : <ArrowDownRight className="h-4 w-4" style={{ color: 'var(--color-danger)' }} />}
+                    <span
+                      className="tx-amount tabular-nums"
+                      style={{ color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)' }}
                     >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
-                  {categoryData.slice(0, 6).map((entry, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                      <span className="text-xs text-gray-600">{entry.name}</span>
+                      {formatCurrency(Number(t.amount))}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Upcoming / A Vencer */}
+        <div className="card">
+          <div className="card-hd">
+            <h2 className="card-title">Despesas a Pagar</h2>
+          </div>
+          {upcomingExpenses.length === 0 ? (
+            <div className="empty">Nenhuma despesa pendente</div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {upcomingThisMonth.length > 0 && (
+                <>
+                  <div className="py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">Este mês</div>
+                  {upcomingThisMonth.map(e => (
+                    <div key={e.id} className="tx-row">
+                      <div
+                        className="tx-icon"
+                        style={{ backgroundColor: e.category_color || 'var(--color-fg-faint)' }}
+                      >
+                        <span className="text-xs font-bold">{e.category_name?.[0] ?? '?'}</span>
+                      </div>
+                      <div className="tx-meta">
+                        <p className="title">{e.description}</p>
+                        <p className="sub">{e.category_name ?? 'Sem categoria'} · {formatDate(e.date)}</p>
+                      </div>
+                      <span className="tx-amount tabular-nums" style={{ color: 'var(--color-danger)' }}>
+                        {formatCurrency(Number(e.amount))}
+                      </span>
                     </div>
                   ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Balanço Mensal */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h2 className="text-base font-semibold text-gray-900">Balanço Mensal</h2>
-          </div>
-          <div className="p-4">
-            {trendData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-sm text-gray-400">Sem dados suficientes</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  <Legend />
-                  <Bar dataKey="receitas" fill="#10B981" name="Receitas" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="despesas" fill="#EF4444" name="Despesas" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Charts row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Saldo por Conta */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h2 className="text-base font-semibold text-gray-900">Saldo por Conta</h2>
-          </div>
-          <div className="p-4">
-            {accountData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-sm text-gray-400">Nenhuma conta ativa</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={accountData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  <Bar dataKey="saldo" name="Saldo" radius={[0, 4, 4, 0]}>
-                    {accountData.map((entry, index) => (
-                      <Cell key={index} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Faturas de Cartões */}
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h2 className="text-base font-semibold text-gray-900">Faturas de Cartões</h2>
-          </div>
-          <div className="p-4">
-            {cardData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-sm text-gray-400">Nenhum cartão ativo</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={cardData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                  <Legend />
-                  <Bar dataKey="fatura" fill="#3B82F6" name="Fatura" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="limite" fill="#E5E7EB" name="Limite" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Despesas a Pagar */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Despesas a Pagar</h2>
-        </div>
-        {upcomingExpenses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-sm text-gray-400">Nenhuma despesa pendente</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {upcomingThisMonth.length > 0 && (
-              <>
-                <div className="px-6 py-2 bg-gray-50">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Este mês</span>
-                </div>
-                {upcomingThisMonth.map(e => (
-                  <div key={e.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
+                </>
+              )}
+              {upcomingNextMonth.length > 0 && (
+                <>
+                  <div className="py-1 mt-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">Próximo mês</div>
+                  {upcomingNextMonth.map(e => (
+                    <div key={e.id} className="tx-row">
                       <div
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold shrink-0"
-                        style={{ backgroundColor: e.category_color || '#6B7280' }}
+                        className="tx-icon"
+                        style={{ backgroundColor: e.category_color || 'var(--color-fg-faint)' }}
                       >
-                        {e.category_name?.[0] ?? '?'}
+                        <span className="text-xs font-bold">{e.category_name?.[0] ?? '?'}</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{e.description}</p>
-                        <p className="text-xs text-gray-400">{e.category_name ?? 'Sem categoria'} · {formatDate(e.date)}</p>
+                      <div className="tx-meta">
+                        <p className="title">{e.description}</p>
+                        <p className="sub">{e.category_name ?? 'Sem categoria'} · {formatDate(e.date)}</p>
                       </div>
+                      <span className="tx-amount tabular-nums" style={{ color: 'var(--color-danger)' }}>
+                        {formatCurrency(Number(e.amount))}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-red-600">{formatCurrency(Number(e.amount))}</span>
-                  </div>
-                ))}
-              </>
-            )}
-            {upcomingNextMonth.length > 0 && (
-              <>
-                <div className="px-6 py-2 bg-gray-50">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Próximo mês</span>
-                </div>
-                {upcomingNextMonth.map(e => (
-                  <div key={e.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold shrink-0"
-                        style={{ backgroundColor: e.category_color || '#6B7280' }}
-                      >
-                        {e.category_name?.[0] ?? '?'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{e.description}</p>
-                        <p className="text-xs text-gray-400">{e.category_name ?? 'Sem categoria'} · {formatDate(e.date)}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-red-600">{formatCurrency(Number(e.amount))}</span>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Transações Recentes */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Transações Recentes</h2>
-          <Link href="/dashboard/transactions" className="text-xs font-medium text-blue-600 hover:underline">Ver todas</Link>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
-        {recentTransactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-sm text-gray-400">Nenhuma transação recente</p>
-            <Link href="/dashboard/transactions" className="mt-3 text-xs font-medium text-blue-600 hover:underline">Adicionar primeira transação</Link>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {recentTransactions.map(t => (
-              <div key={t.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-white text-xs font-bold shrink-0"
-                    style={{ backgroundColor: t.category_color || '#6B7280' }}
-                  >
-                    {t.category_name?.[0] ?? '?'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{t.description}</p>
-                    <p className="text-xs text-gray-400">{t.category_name ?? 'Sem categoria'} · {t.account_name} · {formatDate(t.date)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {t.type === 'income'
-                    ? <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-                    : <ArrowDownRight className="h-4 w-4 text-red-500" />}
-                  <span className={`text-sm font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {formatCurrency(Number(t.amount))}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
