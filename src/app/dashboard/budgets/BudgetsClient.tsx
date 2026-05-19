@@ -49,7 +49,11 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setSaving(false)
+      showToast('Sessão expirada. Faça login novamente.', 'error')
+      return
+    }
     await supabase.from('budgets').insert({
       user_id: user.id,
       category_id: form.category_id || null,

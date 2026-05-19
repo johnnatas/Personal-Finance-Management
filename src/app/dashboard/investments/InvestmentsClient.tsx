@@ -52,7 +52,11 @@ export function InvestmentsClient({ initialInvestments }: Props) {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setSaving(false)
+      showToast('Sessão expirada. Faça login novamente.', 'error')
+      return
+    }
     await supabase.from('investments').insert({
       user_id: user.id,
       name: form.name, type: form.type,

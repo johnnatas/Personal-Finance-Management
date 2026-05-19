@@ -55,7 +55,11 @@ function AccountsInner({ initialAccounts }: Props) {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setSaving(false)
+      showToast('Sessão expirada. Faça login novamente.', 'error')
+      return
+    }
     const balance = parseFloat(form.initial_balance) || 0
     await supabase.from('accounts').insert({
       user_id: user.id,

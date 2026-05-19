@@ -80,7 +80,11 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setSaving(false)
+      setErrors({ submit: 'Sessão expirada. Faça login novamente.' })
+      return
+    }
     const { error } = await supabase.from('credit_cards').insert({
       user_id: user.id,
       name: form.name.trim(),

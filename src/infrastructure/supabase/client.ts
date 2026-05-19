@@ -9,7 +9,6 @@ export function createClient() {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: 'finpro-auth-token',
       },
     }
   )

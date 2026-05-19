@@ -68,7 +68,10 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
   const handleSubmit = async (data: Record<string, unknown>) => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      showToast('Sessão expirada. Faça login novamente.', 'error')
+      throw new Error('Não autenticado')
+    }
     const { error: err } = await supabase.from('transactions').insert({
       user_id: user.id,
       type: data.type,
