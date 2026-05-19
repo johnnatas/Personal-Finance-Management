@@ -3,8 +3,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button } from '@/presentation/components/ui/button'
-import { TransactionType, TransactionStatus, PaymentMethod } from '@/domain/entities/Transaction'
+import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
 
 const schema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
@@ -16,8 +15,6 @@ const schema = z.object({
   paymentMethod: z.string().optional(),
   status: z.enum(['pending', 'completed', 'cancelled']).default('completed'),
   destinationAccountId: z.string().optional(),
-  notes: z.string().optional(),
-  tags: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -49,21 +46,26 @@ interface TransactionFormProps {
   loading?: boolean
 }
 
+const inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20'
+const labelClass = 'text-sm font-medium text-gray-700'
+
 export function TransactionForm({ accounts, categories, onSubmit, onCancel, defaultValues, loading }: TransactionFormProps) {
   const today = new Date().toISOString().split('T')[0]
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
     defaultValues: {
       type: 'expense',
       date: today,
       status: 'completed',
+      amount: 0,
       ...defaultValues,
     },
   })
 
   const type = watch('type')
+  const amount = watch('amount')
 
   const filteredCategories = categories.filter(
     c => c.type === type || c.type === 'both'
@@ -71,13 +73,13 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label htmlFor="type" className="text-sm font-medium">Tipo</label>
+          <label htmlFor="type" className={labelClass}>Tipo</label>
           <select
             id="type"
             {...register('type')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="expense">Despesa</option>
             <option value="income">Receita</option>
@@ -86,11 +88,11 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="status" className="text-sm font-medium">Status</label>
+          <label htmlFor="status" className={labelClass}>Status</label>
           <select
             id="status"
             {...register('status')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="completed">Efetivada</option>
             <option value="pending">Pendente</option>
@@ -99,49 +101,46 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="amount" className="text-sm font-medium">Valor</label>
-        <input
+        <label htmlFor="amount" className={labelClass}>Valor</label>
+        <CurrencyInput
           id="amount"
-          type="number"
-          step="0.01"
-          min="0.01"
-          placeholder="0,00"
-          {...register('amount')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={amount ? String(amount) : ''}
+          onChange={(numericValue) => setValue('amount', numericValue ? parseFloat(numericValue) : 0, { shouldValidate: true })}
+          className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         />
-        {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+        {errors.amount && <p className="text-xs text-red-600">{errors.amount.message}</p>}
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="description" className="text-sm font-medium">Descrição</label>
+        <label htmlFor="description" className={labelClass}>Descrição</label>
         <input
           id="description"
           type="text"
           placeholder="Ex: Supermercado Extra"
           {...register('description')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className={inputClass}
         />
-        {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+        {errors.description && <p className="text-xs text-red-600">{errors.description.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label htmlFor="date" className="text-sm font-medium">Data</label>
+          <label htmlFor="date" className={labelClass}>Data</label>
           <input
             id="date"
             type="date"
             {...register('date')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={inputClass}
           />
-          {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+          {errors.date && <p className="text-xs text-red-600">{errors.date.message}</p>}
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="paymentMethod" className="text-sm font-medium">Forma de Pagamento</label>
+          <label htmlFor="paymentMethod" className={labelClass}>Forma de Pagamento</label>
           <select
             id="paymentMethod"
             {...register('paymentMethod')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="">Selecione</option>
             <option value="pix">PIX</option>
@@ -155,27 +154,27 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="accountId" className="text-sm font-medium">Conta</label>
+        <label htmlFor="accountId" className={labelClass}>Conta</label>
         <select
           id="accountId"
           {...register('accountId')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className={inputClass}
         >
           <option value="">Selecione uma conta</option>
           {accounts.filter(a => a.isActive).map(account => (
             <option key={account.id} value={account.id}>{account.name}</option>
           ))}
         </select>
-        {errors.accountId && <p className="text-xs text-destructive">{errors.accountId.message}</p>}
+        {errors.accountId && <p className="text-xs text-red-600">{errors.accountId.message}</p>}
       </div>
 
       {type === 'transfer' && (
         <div className="space-y-1">
-          <label htmlFor="destinationAccountId" className="text-sm font-medium">Conta Destino</label>
+          <label htmlFor="destinationAccountId" className={labelClass}>Conta Destino</label>
           <select
             id="destinationAccountId"
             {...register('destinationAccountId')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="">Selecione a conta destino</option>
             {accounts.filter(a => a.isActive).map(account => (
@@ -187,11 +186,11 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
 
       {type !== 'transfer' && (
         <div className="space-y-1">
-          <label htmlFor="categoryId" className="text-sm font-medium">Categoria</label>
+          <label htmlFor="categoryId" className={labelClass}>Categoria</label>
           <select
             id="categoryId"
             {...register('categoryId')}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={inputClass}
           >
             <option value="">Sem categoria</option>
             {filteredCategories.map(cat => (
@@ -201,20 +200,21 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
         </div>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="notes" className="text-sm font-medium">Observações</label>
-        <textarea
-          id="notes"
-          rows={2}
-          placeholder="Opcional"
-          {...register('notes')}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
-        />
-      </div>
-
-      <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" loading={isSubmitting || loading}>Salvar</Button>
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting || loading}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+        >
+          Salvar
+        </button>
       </div>
     </form>
   )

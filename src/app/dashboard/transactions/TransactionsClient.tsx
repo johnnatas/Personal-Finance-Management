@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, ArrowUpRight, ArrowDownRight, ArrowLeftRight, Trash2 } from 'lucide-react'
 import { TransactionForm } from '@/presentation/components/transactions/TransactionForm'
 import { useTransactions } from '@/presentation/hooks/useTransactions'
-import { formatCurrency, formatDate, getFirstDayOfMonth, getLastDayOfMonth } from '@/presentation/lib/utils'
+import { formatCurrency, formatDate } from '@/presentation/lib/utils'
 import { createClient } from '@/infrastructure/supabase/client'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
 import { useToast } from '@/presentation/components/ui/Toast'
@@ -21,11 +21,18 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
 
-  const now = new Date()
+  const [year, month] = selectedMonth.split('-').map(Number)
+  const dateFrom = `${year}-${String(month).padStart(2, '0')}-01`
+  const dateTo = new Date(year, month, 0).toISOString().split('T')[0]
+
   const { transactions, loading, error, refetch } = useTransactions({
-    dateFrom: getFirstDayOfMonth(now),
-    dateTo: getLastDayOfMonth(now),
+    dateFrom,
+    dateTo,
     type: filterType || undefined,
   })
 
@@ -83,7 +90,9 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transações</h1>
-          <p className="text-sm text-gray-500">{filtered.length} transaç{filtered.length !== 1 ? 'ões' : 'ão'} no período</p>
+          <p className="text-sm text-gray-500">
+            {filtered.length} transaç{filtered.length !== 1 ? 'ões' : 'ão'} em {new Date(year, month - 1, 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+          </p>
         </div>
         <button onClick={() => setShowForm(true)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
           <Plus className="h-4 w-4" /> Nova Transação
@@ -102,7 +111,15 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2">
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input type="text" placeholder="Buscar transações..." value={search} onChange={e => setSearch(e.target.value)}

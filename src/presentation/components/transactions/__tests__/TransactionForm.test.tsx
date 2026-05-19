@@ -56,7 +56,7 @@ describe('TransactionForm', () => {
         onCancel={onCancel}
       />
     )
-    await userEvent.type(screen.getByLabelText(/valor/i), '100')
+    await userEvent.type(screen.getByLabelText(/valor/i), '10000')
     await userEvent.click(screen.getByRole('button', { name: /salvar/i }))
     expect(await screen.findByText(/descrição é obrigatória/i)).toBeInTheDocument()
   })
@@ -72,7 +72,7 @@ describe('TransactionForm', () => {
       />
     )
 
-    await user.type(screen.getByLabelText(/valor/i), '150')
+    await user.type(screen.getByLabelText(/valor/i), '15000')
     await user.type(screen.getByLabelText(/descrição/i), 'Supermercado')
     await user.selectOptions(screen.getByLabelText(/conta/i), 'acc-1')
     await user.click(screen.getByRole('button', { name: /salvar/i }))
