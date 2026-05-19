@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Plus, PieChart, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
+import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
+import { useToast } from '@/presentation/components/ui/Toast'
 
 const PERIODS = [
   { value: 'monthly', label: 'Mensal' },
@@ -33,9 +36,11 @@ function ProgressBar({ value, max, threshold }: { value: number; max: number; th
 
 export function BudgetsClient({ initialBudgets, categories }: Props) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [budgets, setBudgets] = useState(initialBudgets)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const today = new Date().toISOString().split('T')[0]
   const lastDay = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
   const [form, setForm] = useState({
@@ -63,13 +68,20 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
     })
     setShowForm(false)
     setSaving(false)
+    showToast('Orçamento criado com sucesso!')
     router.refresh()
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Excluir este orçamento?')) return
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     const supabase = createClient()
-    await supabase.from('budgets').update({ is_active: false }).eq('id', id)
+    await supabase.from('budgets').update({ is_active: false }).eq('id', deleteTarget)
+    setDeleteTarget(null)
+    showToast('Orçamento excluído', 'info')
     router.refresh()
   }
 
@@ -92,7 +104,7 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-5 text-lg font-semibold text-gray-900">Novo Orçamento</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Categoria</label>
                 <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
@@ -112,8 +124,12 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Valor limite *</label>
-                <input required type="number" step="0.01" min="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                  placeholder="0,00" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
+                <CurrencyInput
+                  value={form.amount}
+                  onChange={(numericValue) => setForm(f => ({ ...f, amount: numericValue }))}
+                  placeholder="0,00"
+                  className="w-full rounded-lg border border-gray-300 bg-white py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700">Alerta em (%)</label>
@@ -131,7 +147,7 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none" />
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
               <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {saving ? 'Salvando...' : 'Salvar Orçamento'}
@@ -192,6 +208,14 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Excluir orçamento"
+        message="Tem certeza que deseja excluir este orçamento?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

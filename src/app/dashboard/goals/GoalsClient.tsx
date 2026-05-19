@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Plus, Target, Trophy, Clock, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
+import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { useToast } from '@/presentation/components/ui/Toast'
 
 const GOAL_TYPES = [
   { value: 'savings', label: 'Poupança' },
@@ -30,9 +32,11 @@ interface Props { initialGoals: Goal[]; accounts: Account[] }
 
 export function GoalsClient({ initialGoals, accounts }: Props) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [goals, setGoals] = useState(initialGoals)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '', type: 'savings', target_amount: '', deadline: '', priority: 'medium', description: '',
   })
@@ -56,13 +60,20 @@ export function GoalsClient({ initialGoals, accounts }: Props) {
     })
     setShowForm(false)
     setSaving(false)
+    showToast('Meta criada com sucesso!')
     router.refresh()
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Cancelar esta meta?')) return
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     const supabase = createClient()
-    await supabase.from('goals').update({ status: 'cancelled' }).eq('id', id)
+    await supabase.from('goals').update({ status: 'cancelled' }).eq('id', deleteTarget)
+    setDeleteTarget(null)
+    showToast('Meta cancelada', 'info')
     router.refresh()
   }
 
@@ -82,8 +93,8 @@ export function GoalsClient({ initialGoals, accounts }: Props) {
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-5 text-lg font-semibold text-gray-900">Nova Meta Financeira</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5 col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 col-span-1 sm:col-span-2">
                 <label className="text-sm font-medium text-gray-700">Nome da meta *</label>
                 <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Ex: Viagem para Europa" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
@@ -113,7 +124,7 @@ export function GoalsClient({ initialGoals, accounts }: Props) {
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none" />
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
               <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                 {saving ? 'Salvando...' : 'Salvar Meta'}
@@ -175,6 +186,14 @@ export function GoalsClient({ initialGoals, accounts }: Props) {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Cancelar meta"
+        message="Tem certeza que deseja cancelar esta meta?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

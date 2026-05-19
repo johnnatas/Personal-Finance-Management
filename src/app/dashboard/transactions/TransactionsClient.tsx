@@ -7,6 +7,8 @@ import { TransactionForm } from '@/presentation/components/transactions/Transact
 import { useTransactions } from '@/presentation/hooks/useTransactions'
 import { formatCurrency, formatDate, getFirstDayOfMonth, getLastDayOfMonth } from '@/presentation/lib/utils'
 import { createClient } from '@/infrastructure/supabase/client'
+import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
+import { useToast } from '@/presentation/components/ui/Toast'
 
 interface Account { id: string; name: string; type: string; current_balance: number; currency: string; color: string; isActive: boolean; currentBalance: number }
 interface Category { id: string; name: string; type: string; color: string; icon: string }
@@ -14,9 +16,11 @@ interface Props { initialAccounts: Account[]; initialCategories: Category[] }
 
 export function TransactionsClient({ initialAccounts, initialCategories }: Props) {
   const router = useRouter()
+  const { showToast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const now = new Date()
   const { transactions, loading, error, refetch } = useTransactions({
@@ -49,14 +53,21 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
     })
     if (err) throw new Error(err.message)
     setShowForm(false)
+    showToast('Transação registrada com sucesso!')
     refetch()
     router.refresh()
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Excluir esta transação?')) return
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     const supabase = createClient()
-    await supabase.from('transactions').update({ deleted_at: new Date().toISOString(), status: 'cancelled' }).eq('id', id)
+    await supabase.from('transactions').update({ deleted_at: new Date().toISOString(), status: 'cancelled' }).eq('id', deleteTarget)
+    setDeleteTarget(null)
+    showToast('Transação excluída', 'info')
     refetch()
     router.refresh()
   }
@@ -151,6 +162,14 @@ export function TransactionsClient({ initialAccounts, initialCategories }: Props
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Excluir transação"
+        message="Tem certeza que deseja excluir esta transação?"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
