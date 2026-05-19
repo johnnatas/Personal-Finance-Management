@@ -10,9 +10,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/auth/login')
 
   const headersList = await headers()
-  const pathname = headersList.get('x-invoke-path') ?? headersList.get('x-pathname') ?? ''
+  const pathname = headersList.get('x-pathname') ?? ''
 
-  if (!pathname.includes('/dashboard/accounts')) {
+  if (!pathname.startsWith('/dashboard/accounts')) {
     const { data: accounts } = await supabase
       .from('accounts')
       .select('id')

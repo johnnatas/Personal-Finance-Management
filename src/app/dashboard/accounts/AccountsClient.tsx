@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Wallet, Building2, CreditCard, TrendingUp, Banknote, MoreHorizontal, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
@@ -39,7 +39,7 @@ function AccountTypeLabel({ type }: { type: string }) {
   return ACCOUNT_TYPES.find(t => t.value === type)?.label ?? type
 }
 
-export function AccountsClient({ initialAccounts }: Props) {
+function AccountsInner({ initialAccounts }: Props) {
   const searchParams = useSearchParams()
   const isOnboarding = searchParams.get('onboarding') === 'true'
   const [accounts, setAccounts] = useState(initialAccounts)
@@ -199,5 +199,13 @@ export function AccountsClient({ initialAccounts }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+export function AccountsClient({ initialAccounts }: Props) {
+  return (
+    <Suspense fallback={null}>
+      <AccountsInner initialAccounts={initialAccounts} />
+    </Suspense>
   )
 }
