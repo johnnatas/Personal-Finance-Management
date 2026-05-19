@@ -44,7 +44,7 @@ export default function LoginPage() {
         <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
           <TrendingUp className="h-8 w-8 text-white" />
         </div>
-        <h2 className="mb-3 text-3xl font-bold">FinançasPro</h2>
+        <h2 className="mb-3 text-3xl font-bold">Dindin</h2>
         <p className="max-w-xs text-center text-blue-100 text-sm leading-relaxed">
           Controle total das suas finanças pessoais. Acompanhe receitas, despesas e metas em um só lugar.
         </p>
@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">FinançasPro</span>
+            <span className="text-xl font-bold text-gray-900">Dindin</span>
           </div>
 
           <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-200">

@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SCFP - Sistema de Controle Financeiro Pessoal',
+  title: 'Dindin - Controle Financeiro Pessoal',
   description: 'Gerencie suas finanças pessoais de forma inteligente e segura',
 }
 

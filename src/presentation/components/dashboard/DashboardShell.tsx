@@ -27,7 +27,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
                 <TrendingUp className="h-4 w-4 text-white" />
               </div>
-              <span className="text-base font-bold text-gray-900">FinançasPro</span>
+              <span className="text-base font-bold text-gray-900">Dindin</span>
             </div>
             <div className="w-9" />
           </header>
