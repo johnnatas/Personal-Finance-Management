@@ -207,7 +207,7 @@ export function DashboardClient({
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 justify-center">
@@ -239,7 +239,7 @@ export function DashboardClient({
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                   <Legend />
                   <Bar dataKey="receitas" fill="#10B981" name="Receitas" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="despesas" fill="#EF4444" name="Despesas" radius={[4, 4, 0, 0]} />
@@ -268,7 +268,7 @@ export function DashboardClient({
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                   <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                   <Bar dataKey="saldo" name="Saldo" radius={[0, 4, 4, 0]}>
                     {accountData.map((entry, index) => (
                       <Cell key={index} fill={entry.fill} />
@@ -296,7 +296,7 @@ export function DashboardClient({
                   <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                   <Legend />
                   <Bar dataKey="fatura" fill="#3B82F6" name="Fatura" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="limite" fill="#E5E7EB" name="Limite" radius={[4, 4, 0, 0]} />

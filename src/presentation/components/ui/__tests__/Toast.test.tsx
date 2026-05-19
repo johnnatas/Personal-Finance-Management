@@ -3,7 +3,7 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ToastProvider, useToast } from '../Toast'
 
-function TestComponent({ message = 'Salvo com sucesso', type = 'success' as const }) {
+function TestComponent({ message = 'Salvo com sucesso', type = 'success' }: { message?: string; type?: 'success' | 'error' | 'info' }) {
   const { showToast } = useToast()
   return <button onClick={() => showToast(message, type)}>Mostrar toast</button>
 }
