@@ -11,7 +11,7 @@ export default async function TransactionsPage() {
 
   return (
     <TransactionsClient
-      initialAccounts={(accounts ?? []).map(a => ({ ...a, isActive: a.is_active }))}
+      initialAccounts={(accounts ?? []).map(a => ({ ...a, isActive: a.is_active, currentBalance: a.current_balance }))}
       initialCategories={categories ?? []}
     />
   )

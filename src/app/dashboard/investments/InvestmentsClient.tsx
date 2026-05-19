@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, TrendingUp, TrendingDown, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
@@ -25,6 +26,7 @@ interface Investment {
 interface Props { initialInvestments: Investment[] }
 
 export function InvestmentsClient({ initialInvestments }: Props) {
+  const router = useRouter()
   const [investments, setInvestments] = useState(initialInvestments)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -34,25 +36,21 @@ export function InvestmentsClient({ initialInvestments }: Props) {
     currency: 'BRL', institution: '',
   })
 
+  useEffect(() => { setInvestments(initialInvestments) }, [initialInvestments])
+
   const totalInvested = investments.reduce((s, i) => s + Number(i.purchase_value) * Number(i.quantity), 0)
   const totalCurrent = investments.reduce((s, i) => s + Number(i.current_value) * Number(i.quantity), 0)
   const totalReturn = totalCurrent - totalInvested
   const returnPct = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0
 
-  const reload = async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('investments')
-      .select('id, name, type, purchase_value, current_value, quantity, purchase_date, currency, institution')
-      .order('created_at', { ascending: false })
-    setInvestments(data ?? [])
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
     await supabase.from('investments').insert({
+      user_id: user.id,
       name: form.name, type: form.type,
       purchase_value: parseFloat(form.purchase_value),
       current_value: parseFloat(form.current_value || form.purchase_value),
@@ -63,14 +61,14 @@ export function InvestmentsClient({ initialInvestments }: Props) {
     })
     setShowForm(false)
     setSaving(false)
-    await reload()
+    router.refresh()
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Excluir este investimento?')) return
     const supabase = createClient()
     await supabase.from('investments').delete().eq('id', id)
-    await reload()
+    router.refresh()
   }
 
   return (

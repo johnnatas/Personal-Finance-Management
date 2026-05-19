@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Target, Trophy, Clock, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
@@ -28,6 +29,7 @@ interface Account { id: string; name: string }
 interface Props { initialGoals: Goal[]; accounts: Account[] }
 
 export function GoalsClient({ initialGoals, accounts }: Props) {
+  const router = useRouter()
   const [goals, setGoals] = useState(initialGoals)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -35,17 +37,16 @@ export function GoalsClient({ initialGoals, accounts }: Props) {
     name: '', type: 'savings', target_amount: '', deadline: '', priority: 'medium', description: '',
   })
 
-  const reload = async () => {
-    const supabase = createClient()
-    const { data } = await supabase.from('goals').select('id, name, description, target_amount, current_amount, deadline, status, type, priority').neq('status', 'cancelled').order('created_at', { ascending: false })
-    setGoals(data ?? [])
-  }
+  useEffect(() => { setGoals(initialGoals) }, [initialGoals])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
     await supabase.from('goals').insert({
+      user_id: user.id,
       name: form.name, type: form.type,
       target_amount: parseFloat(form.target_amount),
       current_amount: 0, status: 'in_progress',
@@ -55,14 +56,14 @@ export function GoalsClient({ initialGoals, accounts }: Props) {
     })
     setShowForm(false)
     setSaving(false)
-    await reload()
+    router.refresh()
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Cancelar esta meta?')) return
     const supabase = createClient()
     await supabase.from('goals').update({ status: 'cancelled' }).eq('id', id)
-    await reload()
+    router.refresh()
   }
 
   return (

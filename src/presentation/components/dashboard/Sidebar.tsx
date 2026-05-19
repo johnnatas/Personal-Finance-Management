@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, ArrowLeftRight, Wallet, PieChart,
+  LayoutDashboard, ArrowLeftRight, Wallet, CreditCard, PieChart,
   Target, TrendingUp, LogOut, ChevronRight,
 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/transactions', label: 'Transações', icon: ArrowLeftRight },
   { href: '/dashboard/accounts', label: 'Contas', icon: Wallet },
+  { href: '/dashboard/credit-cards', label: 'Cartões', icon: CreditCard },
   { href: '/dashboard/budgets', label: 'Orçamentos', icon: PieChart },
   { href: '/dashboard/goals', label: 'Metas', icon: Target },
   { href: '/dashboard/investments', label: 'Investimentos', icon: TrendingUp },

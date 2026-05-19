@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, PieChart, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
@@ -31,6 +32,7 @@ function ProgressBar({ value, max, threshold }: { value: number; max: number; th
 }
 
 export function BudgetsClient({ initialBudgets, categories }: Props) {
+  const router = useRouter()
   const [budgets, setBudgets] = useState(initialBudgets)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -41,17 +43,16 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
     start_date: today.slice(0, 7) + '-01', end_date: lastDay, alert_threshold: '80',
   })
 
-  const reload = async () => {
-    const supabase = createClient()
-    const { data } = await supabase.from('budgets').select('id, category_id, amount, spent, period, start_date, end_date, alert_threshold, is_active').eq('is_active', true).order('created_at', { ascending: false })
-    setBudgets(data ?? [])
-  }
+  useEffect(() => { setBudgets(initialBudgets) }, [initialBudgets])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
     await supabase.from('budgets').insert({
+      user_id: user.id,
       category_id: form.category_id || null,
       amount: parseFloat(form.amount),
       period: form.period,
@@ -62,14 +63,14 @@ export function BudgetsClient({ initialBudgets, categories }: Props) {
     })
     setShowForm(false)
     setSaving(false)
-    await reload()
+    router.refresh()
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Excluir este orçamento?')) return
     const supabase = createClient()
     await supabase.from('budgets').update({ is_active: false }).eq('id', id)
-    await reload()
+    router.refresh()
   }
 
   const getCategoryName = (id: string | null) => categories.find(c => c.id === id)?.name ?? 'Geral'

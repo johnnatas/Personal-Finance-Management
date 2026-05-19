@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Wallet, Building2, CreditCard, TrendingUp, Banknote, MoreHorizontal, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
@@ -41,6 +41,7 @@ function AccountTypeLabel({ type }: { type: string }) {
 
 function AccountsInner({ initialAccounts }: Props) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const isOnboarding = searchParams.get('onboarding') === 'true'
   const [accounts, setAccounts] = useState(initialAccounts)
   const [showForm, setShowForm] = useState(false)
@@ -50,20 +51,19 @@ function AccountsInner({ initialAccounts }: Props) {
     currency: 'BRL', color: '#3B82F6', institution: '',
   })
 
-  const totalBalance = accounts.filter(a => a.is_active).reduce((s, a) => s + Number(a.current_balance), 0)
+  useEffect(() => { setAccounts(initialAccounts) }, [initialAccounts])
 
-  const reload = async () => {
-    const supabase = createClient()
-    const { data } = await supabase.from('accounts').select('id, name, type, current_balance, initial_balance, currency, color, institution, is_active').order('created_at', { ascending: true })
-    setAccounts(data ?? [])
-  }
+  const totalBalance = accounts.filter(a => a.is_active).reduce((s, a) => s + Number(a.current_balance), 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
     const balance = parseFloat(form.initial_balance) || 0
     await supabase.from('accounts').insert({
+      user_id: user.id,
       name: form.name, type: form.type,
       initial_balance: balance, current_balance: balance,
       currency: form.currency, color: form.color,
@@ -72,14 +72,14 @@ function AccountsInner({ initialAccounts }: Props) {
     setShowForm(false)
     setForm({ name: '', type: 'checking_account', initial_balance: '', currency: 'BRL', color: '#3B82F6', institution: '' })
     setSaving(false)
-    await reload()
+    router.refresh()
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Desativar esta conta?')) return
     const supabase = createClient()
     await supabase.from('accounts').update({ is_active: false }).eq('id', id)
-    await reload()
+    router.refresh()
   }
 
   return (
