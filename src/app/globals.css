@@ -104,9 +104,21 @@ button { font-family: inherit; }
    ============================================================ */
 @keyframes fadeIn  { from { opacity: 0; transform: translateY(8px); }  to { opacity: 1; transform: translateY(0); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes blob {
+  0%, 100% { border-radius: 50% 45% 55% 50% / 50% 55% 45% 50%; }
+  50%      { border-radius: 45% 55% 50% 50% / 55% 45% 50% 50%; }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
 
 .animate-fade-in { animation: fadeIn .3s ease both; }
 .animate-slide-up { animation: slideUp .3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-pulse-dot { animation: pulse-dot 2s infinite; }
+.animate-blob { animation: blob 14s ease-in-out infinite; }
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
 
 /* ============================================================
    Component classes (reusable across the app)
@@ -144,6 +156,8 @@ button { font-family: inherit; }
 .btn-outline:hover:not(:disabled) { background: var(--color-surface-muted); }
 .btn-danger { background: var(--color-danger); color: white; }
 .btn-danger:hover:not(:disabled) { background: #DC2626; }
+
+.btn-lg { padding: 14px 24px; font-size: 15px; border-radius: 14px; }
 
 /* Cards */
 .card {
