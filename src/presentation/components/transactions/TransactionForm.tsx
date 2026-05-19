@@ -45,9 +45,10 @@ interface TransactionFormProps {
   onCancel: () => void
   defaultValues?: Partial<FormData>
   loading?: boolean
+  editId?: string
 }
 
-export function TransactionForm({ accounts, categories, onSubmit, onCancel, defaultValues, loading }: TransactionFormProps) {
+export function TransactionForm({ accounts, categories, onSubmit, onCancel, defaultValues, loading, editId }: TransactionFormProps) {
   const today = new Date().toISOString().split('T')[0]
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -239,7 +240,7 @@ export function TransactionForm({ accounts, categories, onSubmit, onCancel, defa
           Cancelar
         </button>
         <button type="submit" disabled={isSubmitting || loading} className="btn btn-primary">
-          <Check className="h-4 w-4" /> Salvar
+          <Check className="h-4 w-4" /> {editId ? 'Atualizar' : 'Salvar'}
         </button>
       </div>
     </form>

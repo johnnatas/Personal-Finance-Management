@@ -2,9 +2,9 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, ArrowUpRight, ArrowDownRight, ArrowLeftRight, Trash2 } from 'lucide-react'
+import { Plus, Search, ArrowUpRight, ArrowDownRight, ArrowLeftRight, Trash2, Pencil } from 'lucide-react'
 import { TransactionForm } from '@/presentation/components/transactions/TransactionForm'
-import { useTransactions } from '@/presentation/hooks/useTransactions'
+import { useTransactions, TransactionRecord } from '@/presentation/hooks/useTransactions'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
 import { createClient } from '@/infrastructure/supabase/client'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
@@ -38,6 +38,7 @@ function TransactionsInner({ initialAccounts, initialCategories }: Props) {
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<TransactionRecord | null>(null)
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -103,6 +104,27 @@ function TransactionsInner({ initialAccounts, initialCategories }: Props) {
     router.refresh()
   }
 
+  const handleEditSubmit = async (data: Record<string, unknown>) => {
+    if (!editTarget) return
+    const supabase = createClient()
+    const { error: err } = await supabase.from('transactions').update({
+      type: data.type,
+      amount: data.amount,
+      description: data.description,
+      date: data.date,
+      account_id: data.accountId,
+      category_id: data.categoryId || null,
+      payment_method: data.paymentMethod || null,
+      status: data.status,
+      notes: data.notes || null,
+    }).eq('id', editTarget.id)
+    if (err) throw new Error(err.message)
+    setEditTarget(null)
+    showToast('Transação atualizada!')
+    refetch()
+    router.refresh()
+  }
+
   const handleDelete = async (id: string) => {
     setDeleteTarget(id)
   }
@@ -160,6 +182,28 @@ function TransactionsInner({ initialAccounts, initialCategories }: Props) {
           onSubmit={handleSubmit as Parameters<typeof TransactionForm>[0]['onSubmit']}
           onCancel={() => setShowForm(false)}
         />
+      </Modal>
+
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Editar Transação">
+        {editTarget && (
+          <TransactionForm
+            accounts={initialAccounts}
+            categories={initialCategories}
+            editId={editTarget.id}
+            onSubmit={handleEditSubmit as Parameters<typeof TransactionForm>[0]['onSubmit']}
+            onCancel={() => setEditTarget(null)}
+            defaultValues={{
+              type: editTarget.type,
+              amount: Number(editTarget.amount),
+              description: editTarget.description,
+              date: editTarget.date,
+              accountId: editTarget.account_id,
+              categoryId: editTarget.category_id,
+              paymentMethod: editTarget.payment_method,
+              status: editTarget.status,
+            }}
+          />
+        )}
       </Modal>
 
       {/* Filters card */}
@@ -261,6 +305,13 @@ function TransactionsInner({ initialAccounts, initialCategories }: Props) {
                           {formatCurrency(t.amount)}
                         </span>
                       </div>
+                      <button
+                        onClick={() => setEditTarget(t)}
+                        className="text-[var(--color-fg-faint)] hover:text-[var(--color-brand-700)] transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
                       <button onClick={() => handleDelete(t.id)} className="text-[var(--color-fg-faint)] hover:text-red-500 transition-colors" title="Excluir">
                         <Trash2 className="h-4 w-4" />
                       </button>

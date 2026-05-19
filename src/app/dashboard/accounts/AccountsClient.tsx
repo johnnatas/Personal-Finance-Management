@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Wallet, Building2, CreditCard, TrendingUp, Banknote, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Plus, Wallet, Building2, CreditCard, TrendingUp, Banknote, MoreHorizontal, Send, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
 import { formatCurrency } from '@/presentation/lib/utils'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
 import { Modal } from '@/presentation/components/ui/Modal'
 import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
+import { TransactionForm } from '@/presentation/components/transactions/TransactionForm'
 import { useToast } from '@/presentation/components/ui/Toast'
 
 const ACCOUNT_TYPES = [
@@ -27,13 +28,20 @@ interface Account {
   institution?: string; is_active: boolean
 }
 
-interface Props { initialAccounts: Account[] }
-
-function AccountTypeLabel({ type }: { type: string }) {
-  return ACCOUNT_TYPES.find(t => t.value === type)?.label ?? type
+interface CreditCardSummary {
+  id: string; name: string; credit_limit: number; current_bill: number; color: string; flag: string; is_active: boolean
 }
 
-function AccountsInner({ initialAccounts }: Props) {
+interface Props {
+  initialAccounts: Account[]
+  initialCreditCards?: CreditCardSummary[]
+}
+
+function AccountTypeLabel({ type }: { type: string }) {
+  return <>{ACCOUNT_TYPES.find(t => t.value === type)?.label ?? type}</>
+}
+
+function AccountsInner({ initialAccounts, initialCreditCards = [] }: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { showToast } = useToast()
@@ -42,14 +50,50 @@ function AccountsInner({ initialAccounts }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [form, setForm] = useState({
-    name: '', type: 'checking_account', initial_balance: '',
-    currency: 'BRL', color: '#8FBFA9', institution: '',
-  })
+  const [editTarget, setEditTarget] = useState<Account | null>(null)
+  const [transferAccount, setTransferAccount] = useState<Account | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const emptyForm = { name: '', type: 'checking_account', initial_balance: '', currency: 'BRL', color: '#8FBFA9', institution: '' }
+  const [form, setForm] = useState(emptyForm)
 
   useEffect(() => { setAccounts(initialAccounts) }, [initialAccounts])
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openMenuId) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [openMenuId])
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (editTarget) {
+      setForm({
+        name: editTarget.name,
+        type: editTarget.type,
+        initial_balance: String(editTarget.initial_balance),
+        currency: editTarget.currency,
+        color: editTarget.color,
+        institution: editTarget.institution ?? '',
+      })
+      setShowForm(true)
+    }
+  }, [editTarget])
+
   const totalBalance = accounts.filter(a => a.is_active).reduce((s, a) => s + Number(a.current_balance), 0)
+
+  // Credit card aggregates
+  const activeCreditCards = initialCreditCards.filter(c => c.is_active)
+  const totalCreditLimit = activeCreditCards.reduce((s, c) => s + Number(c.credit_limit), 0)
+  const totalCreditUsed = activeCreditCards.reduce((s, c) => s + Number(c.current_bill), 0)
+  const totalCreditAvailable = totalCreditLimit - totalCreditUsed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,6 +105,23 @@ function AccountsInner({ initialAccounts }: Props) {
       showToast('Sessão expirada. Faça login novamente.', 'error')
       return
     }
+
+    if (editTarget) {
+      await supabase.from('accounts').update({
+        name: form.name,
+        type: form.type,
+        color: form.color,
+        institution: form.institution || null,
+      }).eq('id', editTarget.id)
+      setEditTarget(null)
+      setShowForm(false)
+      setForm(emptyForm)
+      setSaving(false)
+      showToast('Conta atualizada!')
+      router.refresh()
+      return
+    }
+
     const balance = parseFloat(form.initial_balance) || 0
     await supabase.from('accounts').insert({
       user_id: user.id,
@@ -70,13 +131,14 @@ function AccountsInner({ initialAccounts }: Props) {
       institution: form.institution || null, is_active: true,
     })
     setShowForm(false)
-    setForm({ name: '', type: 'checking_account', initial_balance: '', currency: 'BRL', color: '#8FBFA9', institution: '' })
+    setForm(emptyForm)
     setSaving(false)
     showToast('Conta criada com sucesso!')
     router.refresh()
   }
 
   const handleDelete = async (id: string) => {
+    setOpenMenuId(null)
     setDeleteTarget(id)
   }
 
@@ -88,6 +150,37 @@ function AccountsInner({ initialAccounts }: Props) {
     showToast('Conta desativada', 'info')
     router.refresh()
   }
+
+  const handleTransferSubmit = async (data: Record<string, unknown>) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { showToast('Sessão expirada', 'error'); return }
+    const { error: err } = await supabase.from('transactions').insert({
+      user_id: user.id,
+      type: 'transfer',
+      amount: data.amount,
+      description: data.description,
+      date: data.date,
+      account_id: data.accountId,
+      destination_account_id: data.destinationAccountId || null,
+      status: data.status,
+      is_recurrent: false,
+      tags: [],
+    })
+    if (err) throw new Error(err.message)
+    setTransferAccount(null)
+    showToast('Transferência registrada!')
+    router.refresh()
+  }
+
+  // Map accounts to the shape TransactionForm expects
+  const accountsForForm = accounts.filter(a => a.is_active).map(a => ({
+    ...a,
+    isActive: a.is_active,
+    currentBalance: Number(a.current_balance),
+  }))
+
+  const isEditing = !!editTarget
 
   return (
     <div className="space-y-6">
@@ -102,6 +195,7 @@ function AccountsInner({ initialAccounts }: Props) {
           </div>
         </div>
       )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -110,27 +204,46 @@ function AccountsInner({ initialAccounts }: Props) {
             Saldo total: <span className="font-semibold text-[var(--color-fg)] tabular-nums">{formatCurrency(totalBalance)}</span>
           </p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn btn-primary">
+        <button onClick={() => { setEditTarget(null); setForm(emptyForm); setShowForm(true) }} className="btn btn-primary">
           <Plus className="h-4 w-4" /> Nova Conta
         </button>
       </div>
 
-      {/* Formulário */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Nova Conta">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="field">
-                <label className="label">Nome da conta *</label>
-                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Nubank" className="input" />
-              </div>
-              <div className="field">
-                <label className="label">Tipo *</label>
-                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                  className="select">
-                  {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
+      {/* Credit card stats */}
+      {activeCreditCards.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="stat-card">
+            <p className="stat-label">Limite Total</p>
+            <p className="stat-value tabular-nums">{formatCurrency(totalCreditLimit)}</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Fatura Atual</p>
+            <p className="stat-value tabular-nums" style={{ color: 'var(--color-danger)' }}>{formatCurrency(totalCreditUsed)}</p>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Disponível</p>
+            <p className="stat-value tabular-nums" style={{ color: 'var(--color-success)' }}>{formatCurrency(Math.max(totalCreditAvailable, 0))}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Account form modal */}
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditTarget(null); setForm(emptyForm) }} title={isEditing ? 'Editar Conta' : 'Nova Conta'}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="field">
+              <label className="label">Nome da conta *</label>
+              <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Ex: Nubank" className="input" />
+            </div>
+            <div className="field">
+              <label className="label">Tipo *</label>
+              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+                className="select">
+                {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            {!isEditing && (
               <div className="field">
                 <label className="label">Saldo inicial</label>
                 <CurrencyInput
@@ -140,29 +253,53 @@ function AccountsInner({ initialAccounts }: Props) {
                   className="input"
                 />
               </div>
+            )}
+            {isEditing && (
               <div className="field">
-                <label className="label">Instituição</label>
-                <input value={form.institution} onChange={e => setForm(f => ({ ...f, institution: e.target.value }))}
-                  placeholder="Ex: Banco do Brasil" className="input" />
+                <label className="label">Saldo inicial</label>
+                <input
+                  value={formatCurrency(parseFloat(form.initial_balance) || 0)}
+                  readOnly
+                  className="input opacity-60 cursor-not-allowed"
+                />
               </div>
-            </div>
+            )}
             <div className="field">
-              <label className="label">Cor</label>
-              <div className="flex gap-2 flex-wrap">
-                {COLORS.map(c => (
-                  <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
-                    className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
-                    style={{ backgroundColor: c, borderColor: form.color === c ? 'var(--color-brand-900)' : 'transparent' }} />
-                ))}
-              </div>
+              <label className="label">Instituição</label>
+              <input value={form.institution} onChange={e => setForm(f => ({ ...f, institution: e.target.value }))}
+                placeholder="Ex: Banco do Brasil" className="input" />
             </div>
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost">Cancelar</button>
-              <button type="submit" disabled={saving} className="btn btn-primary">
-                {saving ? 'Salvando...' : 'Salvar Conta'}
-              </button>
+          </div>
+          <div className="field">
+            <label className="label">Cor</label>
+            <div className="flex gap-2 flex-wrap">
+              {COLORS.map(c => (
+                <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
+                  className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{ backgroundColor: c, borderColor: form.color === c ? 'var(--color-brand-900)' : 'transparent' }} />
+              ))}
             </div>
-          </form>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+            <button type="button" onClick={() => { setShowForm(false); setEditTarget(null); setForm(emptyForm) }} className="btn btn-ghost">Cancelar</button>
+            <button type="submit" disabled={saving} className="btn btn-primary">
+              {saving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Salvar Conta'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Transfer modal */}
+      <Modal open={!!transferAccount} onClose={() => setTransferAccount(null)} title="Nova Transferência">
+        {transferAccount && (
+          <TransactionForm
+            accounts={accountsForForm}
+            categories={[]}
+            onSubmit={handleTransferSubmit as Parameters<typeof TransactionForm>[0]['onSubmit']}
+            onCancel={() => setTransferAccount(null)}
+            defaultValues={{ type: 'transfer', accountId: transferAccount.id }}
+          />
+        )}
       </Modal>
 
       {/* Empty state */}
@@ -179,18 +316,19 @@ function AccountsInner({ initialAccounts }: Props) {
         </div>
       )}
 
-      {/* Lista de contas */}
+      {/* Account cards */}
       {accounts.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {accounts.filter(a => a.is_active).map(account => {
             const initial = (account.name?.[0] ?? '?').toUpperCase()
+            const isMenuOpen = openMenuId === account.id
             return (
               <div
                 key={account.id}
-                className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] overflow-hidden hover:shadow-md transition-shadow"
+                className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] overflow-visible hover:shadow-md transition-shadow"
               >
                 <div
-                  className="p-5"
+                  className="p-5 rounded-t-2xl"
                   style={{ background: `color-mix(in oklab, ${account.color} 16%, var(--color-surface))` }}
                 >
                   <div className="flex items-start justify-between">
@@ -200,9 +338,34 @@ function AccountsInner({ initialAccounts }: Props) {
                     >
                       {initial}
                     </div>
-                    <button onClick={() => handleDelete(account.id)} className="text-[var(--color-fg-faint)] hover:text-red-500 transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {/* "..." dropdown menu */}
+                    <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+                      <button
+                        onClick={() => setOpenMenuId(isMenuOpen ? null : account.id)}
+                        className="icon-btn"
+                        title="Opções"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                      {isMenuOpen && (
+                        <div
+                          className="absolute right-0 top-10 z-20 min-w-[140px] rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-lg py-1"
+                        >
+                          <button
+                            onClick={() => { setOpenMenuId(null); setEditTarget(account) }}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-fg)] hover:bg-[var(--color-surface-muted)] transition-colors"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-[var(--color-fg-muted)]" /> Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(account.id)}
+                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-danger)] hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-4">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
@@ -212,14 +375,24 @@ function AccountsInner({ initialAccounts }: Props) {
                     {account.institution && <p className="text-xs text-[var(--color-fg-faint)]">{account.institution}</p>}
                   </div>
                 </div>
-                <div className="p-5 border-t border-[var(--color-border-soft)] bg-[var(--color-surface)]">
-                  <p className="text-xs text-[var(--color-fg-muted)]">Saldo atual</p>
-                  <p
-                    className="text-xl font-bold tabular-nums"
-                    style={{ color: Number(account.current_balance) >= 0 ? 'var(--color-fg)' : 'var(--color-danger)' }}
+
+                <div className="p-5 border-t border-[var(--color-border-soft)] bg-[var(--color-surface)] rounded-b-2xl space-y-3">
+                  <div>
+                    <p className="text-xs text-[var(--color-fg-muted)]">Saldo atual</p>
+                    <p
+                      className="text-xl font-bold tabular-nums"
+                      style={{ color: Number(account.current_balance) >= 0 ? 'var(--color-fg)' : 'var(--color-danger)' }}
+                    >
+                      {formatCurrency(account.current_balance)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setTransferAccount(account)}
+                    className="btn btn-ghost w-full text-sm py-2"
+                    style={{ borderRadius: 10 }}
                   >
-                    {formatCurrency(account.current_balance)}
-                  </p>
+                    <Send className="h-3.5 w-3.5" /> Transferir
+                  </button>
                 </div>
               </div>
             )
@@ -238,10 +411,10 @@ function AccountsInner({ initialAccounts }: Props) {
   )
 }
 
-export function AccountsClient({ initialAccounts }: Props) {
+export function AccountsClient({ initialAccounts, initialCreditCards }: Props) {
   return (
     <Suspense fallback={null}>
-      <AccountsInner initialAccounts={initialAccounts} />
+      <AccountsInner initialAccounts={initialAccounts} initialCreditCards={initialCreditCards} />
     </Suspense>
   )
 }

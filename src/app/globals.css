@@ -105,6 +105,7 @@ button { font-family: inherit; }
 @keyframes fadeIn  { from { opacity: 0; transform: translateY(8px); }  to { opacity: 1; transform: translateY(0); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes blob {
   0%, 100% { border-radius: 50% 45% 55% 50% / 50% 55% 45% 50%; }
   50%      { border-radius: 45% 55% 50% 50% / 55% 45% 50% 50%; }
@@ -119,6 +120,7 @@ button { font-family: inherit; }
 .animate-pulse-dot { animation: pulse-dot 2s infinite; }
 .animate-blob { animation: blob 14s ease-in-out infinite; }
 .animate-floaty { animation: floaty 6s ease-in-out infinite; }
+.animate-skeleton { animation: skeleton-pulse 1.5s ease-in-out infinite; }
 
 /* ============================================================
    Component classes (reusable across the app)
@@ -416,6 +418,31 @@ button { font-family: inherit; }
   margin: 6px 0 16px;
   font-variant-numeric: tabular-nums;
 }
+.hero-balance .hb-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.hero-balance .hb-actions a,
+.hero-balance .hb-actions button {
+  flex: 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  background: rgba(45, 74, 62, 0.12);
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-brand-900);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.hero-balance .hb-actions a:hover,
+.hero-balance .hb-actions button:hover { background: rgba(45, 74, 62, 0.20); }
 
 /* Empty state */
 .empty {

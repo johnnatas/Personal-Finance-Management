@@ -2,12 +2,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
-  Plus, ArrowUpRight, ArrowDownLeft, Bell, Eye, EyeOff,
+  Plus, ArrowDown, ArrowUp, Bell, Eye, EyeOff,
   Send, QrCode, TrendingUp, TrendingDown,
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/presentation/lib/utils'
 import { CategoryIcon } from '@/presentation/components/ui/CategoryIcon'
+import { Modal } from '@/presentation/components/ui/Modal'
+import { TransactionForm } from '@/presentation/components/transactions/TransactionForm'
+import { createClient } from '@/infrastructure/supabase/client'
+import { useToast } from '@/presentation/components/ui/Toast'
 import {
   PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
@@ -69,12 +74,20 @@ interface RecentTransaction {
   status: string
 }
 
+interface FormAccount {
+  id: string; name: string; type: string; current_balance: number
+  currency: string; color: string; isActive: boolean; currentBalance: number
+}
+interface FormCategory { id: string; name: string; type: string; color: string; icon: string }
+
 interface Props {
   totalBalance: number
   income: number
   expense: number
   accounts: Account[]
   creditCards: CreditCard[]
+  initialAccounts: FormAccount[]
+  initialCategories: FormCategory[]
   monthTransactions: Transaction[]
   trendTransactions: TrendTransaction[]
   upcomingExpenses: UpcomingExpense[]
@@ -126,10 +139,41 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
 
 export function DashboardClient({
   totalBalance, income, expense, accounts,
+  initialAccounts, initialCategories,
   monthTransactions, trendTransactions, upcomingExpenses,
   recentTransactions, currentMonth, userName,
 }: Props) {
+  const router = useRouter()
+  const { showToast } = useToast()
   const [showBalance, setShowBalance] = useState(true)
+  const [showNewTx, setShowNewTx] = useState(false)
+
+  const handleNewTxSubmit = async (data: Record<string, unknown>) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      showToast('Sessão expirada. Faça login novamente.', 'error')
+      throw new Error('Não autenticado')
+    }
+    const { error: err } = await supabase.from('transactions').insert({
+      user_id: user.id,
+      type: data.type,
+      amount: data.amount,
+      description: data.description,
+      date: data.date,
+      account_id: data.accountId,
+      category_id: data.categoryId || null,
+      payment_method: data.paymentMethod || null,
+      status: data.status,
+      notes: data.notes || null,
+      is_recurrent: false,
+      tags: [],
+    })
+    if (err) throw new Error(err.message)
+    setShowNewTx(false)
+    showToast('Transação registrada com sucesso!')
+    router.refresh()
+  }
 
   const result = income - expense
   const incomeCount = monthTransactions.filter(t => t.type === 'income' && t.status === 'completed').length
@@ -218,9 +262,9 @@ export function DashboardClient({
         </div>
         <div className="flex items-center gap-2">
           <span className="chip capitalize">{currentMonth}</span>
-          <Link href="/dashboard/transactions?new=1" className="btn btn-primary">
+          <button onClick={() => setShowNewTx(true)} className="btn btn-primary">
             <Plus className="h-4 w-4" /> Nova Transação
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -240,18 +284,18 @@ export function DashboardClient({
         </div>
         <div className="hb-value">{showBalance ? formatCurrency(totalBalance) : 'R$ ••••••'}</div>
         <div className="hb-actions">
-          <Link href="/dashboard/transactions?new=1" aria-label="Enviar">
+          <button onClick={() => setShowNewTx(true)} aria-label="Enviar">
             <Send className="h-4 w-4" /> Enviar
-          </Link>
-          <Link href="/dashboard/transactions?new=1" aria-label="Receber">
-            <ArrowDownLeft className="h-4 w-4" /> Receber
-          </Link>
-          <Link href="/dashboard/transactions?new=1" aria-label="Pix">
+          </button>
+          <button onClick={() => setShowNewTx(true)} aria-label="Receber">
+            <ArrowDown className="h-4 w-4" /> Receber
+          </button>
+          <button onClick={() => setShowNewTx(true)} aria-label="Pix">
             <QrCode className="h-4 w-4" /> Pix
-          </Link>
-          <Link href="/dashboard/transactions?new=1" aria-label="Depositar">
+          </button>
+          <button onClick={() => setShowNewTx(true)} aria-label="Depositar">
             <Plus className="h-4 w-4" /> Depositar
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -263,7 +307,7 @@ export function DashboardClient({
               className="grid place-items-center rounded-[10px]"
               style={{ width: 30, height: 30, background: 'rgba(34,197,94,0.12)', color: 'var(--color-success)' }}
             >
-              <ArrowDownLeft className="h-3.5 w-3.5" />
+              <ArrowDown className="h-3.5 w-3.5" />
             </div>
             <div className="text-[11px] text-[var(--color-fg-muted)]">Receitas</div>
           </div>
@@ -277,7 +321,7 @@ export function DashboardClient({
               className="grid place-items-center rounded-[10px]"
               style={{ width: 30, height: 30, background: 'rgba(239,68,68,0.12)', color: 'var(--color-danger)' }}
             >
-              <ArrowUpRight className="h-3.5 w-3.5" />
+              <ArrowUp className="h-3.5 w-3.5" />
             </div>
             <div className="text-[11px] text-[var(--color-fg-muted)]">Despesas</div>
           </div>
@@ -517,6 +561,16 @@ export function DashboardClient({
           )}
         </div>
       </div>
+
+      {/* Nova Transação modal — stays on dashboard */}
+      <Modal open={showNewTx} onClose={() => setShowNewTx(false)} title="Nova Transação">
+        <TransactionForm
+          accounts={initialAccounts}
+          categories={initialCategories}
+          onSubmit={handleNewTxSubmit as Parameters<typeof TransactionForm>[0]['onSubmit']}
+          onCancel={() => setShowNewTx(false)}
+        />
+      </Modal>
     </div>
   )
 }

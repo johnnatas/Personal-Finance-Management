@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, CreditCard, Trash2, AlertCircle } from 'lucide-react'
+import { Plus, CreditCard, Trash2, AlertCircle, ArrowDownRight } from 'lucide-react'
 import { createClient } from '@/infrastructure/supabase/client'
-import { formatCurrency } from '@/presentation/lib/utils'
+import { formatCurrency, formatDate } from '@/presentation/lib/utils'
 import { ConfirmModal } from '@/presentation/components/ui/ConfirmModal'
 import { Modal } from '@/presentation/components/ui/Modal'
 import { CurrencyInput } from '@/presentation/components/ui/CurrencyInput'
+import { TransactionForm } from '@/presentation/components/transactions/TransactionForm'
+import { CategoryIcon } from '@/presentation/components/ui/CategoryIcon'
 import { useToast } from '@/presentation/components/ui/Toast'
 
 const FLAGS = [
@@ -36,7 +38,7 @@ function colorVariant(color: string): 'green' | 'lime' | 'dark' {
   return 'green'
 }
 
-interface CreditCard {
+interface CreditCardData {
   id: string; user_id: string; linked_account_id?: string
   name: string; flag: string; last_four?: string
   credit_limit: number; current_bill: number
@@ -44,7 +46,13 @@ interface CreditCard {
   color: string; institution?: string; is_active: boolean
 }
 interface Account { id: string; name: string; type: string }
-interface Props { initialCards: CreditCard[]; accounts: Account[] }
+
+interface CardTransaction {
+  id: string; description: string; amount: number; type: string; date: string
+  category_name?: string; category_color?: string; status: string
+}
+
+interface Props { initialCards: CreditCardData[]; accounts: Account[] }
 
 export function CreditCardsClient({ initialCards, accounts }: Props) {
   const router = useRouter()
@@ -54,6 +62,10 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [payingCard, setPayingCard] = useState<CreditCardData | null>(null)
+  const [detailsCard, setDetailsCard] = useState<CreditCardData | null>(null)
+  const [cardTransactions, setCardTransactions] = useState<CardTransaction[]>([])
+  const [loadingDetails, setLoadingDetails] = useState(false)
   const [form, setForm] = useState({
     name: '', flag: 'visa', last_four: '', credit_limit: '',
     closing_day: '10', due_day: '17', color: '#C5E4D3',
@@ -121,6 +133,55 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
     showToast('Cartão excluído', 'info')
     router.refresh()
   }
+
+  const handlePayBill = async (data: Record<string, unknown>) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { showToast('Sessão expirada', 'error'); return }
+    const { error: err } = await supabase.from('transactions').insert({
+      user_id: user.id,
+      type: 'expense',
+      amount: data.amount,
+      description: data.description,
+      date: data.date,
+      account_id: data.accountId,
+      category_id: data.categoryId || null,
+      payment_method: data.paymentMethod || null,
+      status: data.status,
+      is_recurrent: false,
+      tags: [],
+    })
+    if (err) throw new Error(err.message)
+    setPayingCard(null)
+    showToast('Pagamento da fatura registrado!')
+    router.refresh()
+  }
+
+  const openDetails = async (card: CreditCardData) => {
+    setDetailsCard(card)
+    if (!card.linked_account_id) { setCardTransactions([]); return }
+    setLoadingDetails(true)
+    const supabase = createClient()
+    const now = new Date()
+    const firstDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('transactions_detailed')
+      .select('id, description, amount, type, date, category_name, category_color, status')
+      .eq('account_id', card.linked_account_id)
+      .gte('date', firstDay)
+      .lte('date', lastDay)
+      .order('date', { ascending: false })
+    setCardTransactions(data ?? [])
+    setLoadingDetails(false)
+  }
+
+  // Map accounts for TransactionForm
+  const accountsForForm = accounts.map(a => ({
+    id: a.id, name: a.name, type: a.type,
+    current_balance: 0, currency: 'BRL', color: '#8FBFA9',
+    isActive: true, currentBalance: 0,
+  }))
 
   const field = (key: keyof typeof form) => ({
     value: form[key],
@@ -286,15 +347,87 @@ export function CreditCardsClient({ initialCards, accounts }: Props) {
                       </p>
                     )}
                   </div>
-                  <button onClick={() => handleDelete(card.id)} className="icon-btn shrink-0 hover:text-red-500" title="Excluir">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => setPayingCard(card)}
+                      className="btn btn-ghost text-xs px-3 py-2"
+                      style={{ borderRadius: 10 }}
+                    >
+                      Pagar Fatura
+                    </button>
+                    <button
+                      onClick={() => openDetails(card)}
+                      className="btn btn-ghost text-xs px-3 py-2"
+                      style={{ borderRadius: 10 }}
+                    >
+                      <ArrowDownRight className="h-3.5 w-3.5" /> Detalhes
+                    </button>
+                    <button onClick={() => handleDelete(card.id)} className="icon-btn hover:text-red-500" title="Excluir">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )
           })}
         </div>
       )}
+
+      {/* Pagar Fatura modal */}
+      <Modal open={!!payingCard} onClose={() => setPayingCard(null)} title={`Pagar Fatura — ${payingCard?.name ?? ''}`}>
+        {payingCard && (
+          <TransactionForm
+            accounts={accountsForForm}
+            categories={[]}
+            onSubmit={handlePayBill as Parameters<typeof TransactionForm>[0]['onSubmit']}
+            onCancel={() => setPayingCard(null)}
+            defaultValues={{
+              type: 'expense',
+              accountId: payingCard.linked_account_id,
+              description: `Fatura ${payingCard.name}`,
+              amount: Number(payingCard.current_bill) || undefined,
+            }}
+          />
+        )}
+      </Modal>
+
+      {/* Detalhes modal */}
+      <Modal open={!!detailsCard} onClose={() => { setDetailsCard(null); setCardTransactions([]) }} title={`Histórico — ${detailsCard?.name ?? ''}`}>
+        <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+          {loadingDetails ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+            </div>
+          ) : cardTransactions.length === 0 ? (
+            <div className="empty">
+              {detailsCard?.linked_account_id
+                ? 'Nenhuma transação neste mês'
+                : 'Nenhuma conta vinculada a este cartão'}
+            </div>
+          ) : (
+            cardTransactions.map(t => (
+              <div key={t.id} className="tx-row">
+                <CategoryIcon
+                  name={t.category_name}
+                  color={t.category_color || 'var(--color-fg-faint)'}
+                  size={36}
+                  radius={10}
+                />
+                <div className="tx-meta">
+                  <p className="title">{t.description}</p>
+                  <p className="sub">{t.category_name ?? 'Sem categoria'} · {formatDate(t.date)}</p>
+                </div>
+                <span
+                  className="tx-amount tabular-nums"
+                  style={{ color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)' }}
+                >
+                  {formatCurrency(Number(t.amount))}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </Modal>
 
       <ConfirmModal
         isOpen={!!deleteTarget}
